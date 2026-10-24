@@ -7,6 +7,7 @@ import 'account/identity.dart';
 import 'config.dart';
 import 'settings.dart';
 import 'services/adhan_service.dart';
+import 'quran/mini_player.dart';
 import 'quran/quran_home.dart';
 import 'screens/donations_screen.dart';
 import 'screens/settings_screen.dart';
@@ -165,7 +166,10 @@ class _HomeShellState extends State<HomeShell> {
           ),
         ],
       ),
-      body: _pages[_index],
+      body: Column(children: [
+        const MiniPlayer(),
+        Expanded(child: _pages[_index]),
+      ]),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: SizedBox(
         width: 68,

@@ -77,13 +77,23 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
     return ListView(children: [
       if (perm != null && !perm.ok)
         Card(
-          color: Theme.of(context).colorScheme.errorContainer,
+          color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: BorderSide(color: Theme.of(context).colorScheme.tertiary),
+          ),
           margin: const EdgeInsets.all(12),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('الأذان لن يعمل والتطبيق مغلق حتى تفعّل:',
-                  style: Theme.of(context).textTheme.titleSmall),
+              Row(children: [
+                Icon(Icons.notifications_active_rounded, color: Theme.of(context).colorScheme.tertiary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('فعّل التالي ليعمل الأذان والتطبيق مغلق:',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                ),
+              ]),
               const SizedBox(height: 8),
               if (!perm.notifications)
                 OutlinedButton.icon(

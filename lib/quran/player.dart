@@ -39,6 +39,16 @@ class QuranPlayer extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// إيقاف نهائي وإخفاء شريط التشغيل.
+  Future<void> stop() async {
+    await _audio.stop();
+    surah = null;
+    moshaf = null;
+    reciter = null;
+    error = null;
+    notifyListeners();
+  }
+
   Future<void> toggle() async {
     _audio.playing ? await _audio.pause() : await _audio.play();
     notifyListeners();
