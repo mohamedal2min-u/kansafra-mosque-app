@@ -3,8 +3,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'quran_data.dart';
 
 import 'player.dart';
+import 'reader_screen.dart';
 import 'reciters.dart';
 
+const kFavReciters = 'fav_reciters';
 const kLastReciterId = 'last_reciter_id';
 const kLastMoshaf = 'last_moshaf';
 
@@ -21,13 +23,25 @@ class _ListenScreenState extends State<ListenScreen> {
   ReciterTag _tag = ReciterTag.all;
   String _query = '';
   int? _lastId; // آخر قارئ اختاره المستخدم (محفوظ)
+  Set<int> _favs = {};
+  bool _onlyFav = false;
 
   @override
   void initState() {
     super.initState();
     SharedPreferences.getInstance().then((p) {
-      if (mounted) setState(() => _lastId = p.getInt(kLastReciterId));
+      if (mounted) {
+        setState(() {
+          _lastId = p.getInt(kLastReciterId);
+          _favs = (p.getStringList(kFavReciters) ?? const []).map(int.parse).toSet();
+        });
+      }
     });
+  }
+
+  Future<void> _toggleFav(Reciter r) async {
+    setState(() => _favs.contains(r.id) ? _favs.remove(r.id) : _favs.add(r.id));
+    (await SharedPreferences.getInstance()).setStringList(kFavReciters, _favs.map((e) => '$e').toList());
   }
 
   Future<void> _open(Reciter r) async {
@@ -59,6 +73,7 @@ class _ListenScreenState extends State<ListenScreen> {
           );
         }
         final list = snap.data!
+            .where((r) => !_onlyFav || _favs.contains(r.id))
             .where((r) => _tag == ReciterTag.all || r.tags.contains(_tag))
             .where((r) => r.name.contains(_query))
             .toList();
@@ -92,6 +107,15 @@ class _ListenScreenState extends State<ListenScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  child: FilterChip(
+                    avatar: Icon(Icons.star_rounded, size: 18, color: Theme.of(context).colorScheme.tertiary),
+                    label: const Text('المفضلة'),
+                    selected: _onlyFav,
+                    onSelected: (v) => setState(() => _onlyFav = v),
+                  ),
+                ),
                 for (final t in ReciterTag.values)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
@@ -110,6 +134,14 @@ class _ListenScreenState extends State<ListenScreen> {
               itemBuilder: (context, i) => ListTile(
                 title: Text(list[i].name),
                 subtitle: Text('${list[i].moshafs.length} رواية/تلاوة'),
+                trailing: IconButton(
+                  tooltip: 'مفضلة',
+                  icon: Icon(
+                    _favs.contains(list[i].id) ? Icons.star_rounded : Icons.star_border_rounded,
+                    color: _favs.contains(list[i].id) ? Theme.of(context).colorScheme.tertiary : null,
+                  ),
+                  onPressed: () => _toggleFav(list[i]),
+                ),
                 onTap: () => _open(list[i]),
               ),
             ),
@@ -176,7 +208,14 @@ class _ReciterScreenState extends State<ReciterScreen> {
                   title: Text(QuranData.name(s)),
                   trailing: Icon(current && player.playing ? Icons.pause_circle : Icons.play_circle, size: 40),
                   selected: current,
-                  onTap: () => current ? player.toggle() : player.play(widget.reciter, _moshaf, s),
+                  onTap: () async {
+                    if (!current) await player.play(widget.reciter, _moshaf, s);
+                    if (!context.mounted) return;
+                    // تُفتح الآيات ويُعلَّم الجاري تلاوته بالأحمر.
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => SurahReaderScreen(surah: s, follow: true)),
+                    );
+                  },
                 );
               },
             ),

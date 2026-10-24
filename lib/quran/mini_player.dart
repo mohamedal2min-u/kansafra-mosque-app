@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'player.dart';
 import 'quran_data.dart';
+import 'reader_screen.dart';
 
 /// شريط تشغيل القرآن الدائم أعلى التطبيق: إيقاف مؤقت وإيقاف نهائي والتنقل بين السور.
 class MiniPlayer extends StatelessWidget {
@@ -37,13 +38,18 @@ class MiniPlayer extends StatelessWidget {
                   onPressed: p.toggle,
                 ),
                 Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  child: InkWell(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => SurahReaderScreen(surah: p.surah!, follow: true)),
+                    ),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text('سورة ${QuranData.name(p.surah!)}',
                         style: TextStyle(color: scheme.onPrimary, fontWeight: FontWeight.w700)),
                     Text(p.error ?? p.reciter?.name ?? '',
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(color: scheme.onPrimary.withValues(alpha: 0.8), fontSize: 12)),
                   ]),
+                  ),
                 ),
                 IconButton(
                   tooltip: 'السابقة',
