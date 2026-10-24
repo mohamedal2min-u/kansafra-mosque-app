@@ -14,7 +14,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   AdhanChoice _choice = AdhanChoice(adhanVoices.first, false);
   bool _enabled = true;
-  final _player = AudioPlayer();
+  AudioPlayer? _player; // يُنشأ عند أول استماع فقط
   String? _playingId;
 
   @override
@@ -29,27 +29,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
-    _player.dispose();
+    _player?.dispose();
     super.dispose();
   }
 
   Future<void> _pick(AdhanChoice c) async {
     setState(() => _choice = c);
     await AppSettings.setAdhanChoice(c);
-    await AdhanService.instance.scheduleAll();
+    await AdhanService.instance.scheduleAll(force: true);
   }
 
   Future<void> _preview(AdhanVoice v) async {
-    final id = '${v.id}_${_choice.long}';
+    // المعاينة بمقطع قصير فقط (الأذان الكامل يُشغَّل عند وقت الصلاة)، لتخفيف حجم التطبيق.
+    final id = v.id;
     if (_playingId == id) {
-      await _player.stop();
+      await _player?.stop();
       setState(() => _playingId = null);
       return;
     }
     setState(() => _playingId = id);
     try {
-      await _player.setAsset(v.asset(_choice.long));
-      await _player.play();
+      final player = _player ??= AudioPlayer();
+      await player.setAsset(v.asset(false));
+      await player.play();
     } catch (_) {}
     if (mounted) setState(() => _playingId = null);
   }
@@ -64,7 +66,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         onChanged: (v) async {
           setState(() => _enabled = v);
           await AppSettings.setAdhanEnabled(v);
-          await AdhanService.instance.scheduleAll();
+          await AdhanService.instance.scheduleAll(force: true);
         },
       ),
       const Padding(
@@ -99,8 +101,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: Text(v.name),
               value: v.id,
               secondary: IconButton(
-                icon: Icon(_playingId == '${v.id}_${_choice.long}' ? Icons.stop_circle : Icons.play_circle),
-                tooltip: 'استماع',
+                icon: Icon(_playingId == v.id ? Icons.stop_circle : Icons.play_circle),
+                tooltip: 'استماع لمقطع',
                 onPressed: () => _preview(v),
               ),
             ),

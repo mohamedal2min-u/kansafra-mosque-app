@@ -1,4 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -31,10 +32,20 @@ class AdhanService {
     await scheduleAll();
   }
 
-  Future<void> scheduleAll() async {
-    await _plugin.cancelAll();
-    if (!await AppSettings.adhanEnabled()) return;
+  /// يجدول 7 أيام من التنبيهات. لا يعيد الجدولة (35 منبّهًا) عند كل فتح للتطبيق،
+  /// بل عند تغيّر اليوم أو الإعدادات أو [force]: توفير للبطارية والمعالج.
+  Future<void> scheduleAll({bool force = false}) async {
+    final enabled = await AppSettings.adhanEnabled();
     final sound = await AppSettings.adhanChoice();
+    final now0 = DateTime.now();
+    final signature = '${now0.year}-${now0.month}-${now0.day}|$enabled|${sound.id}|'
+        '${MosqueConfig.latitude},${MosqueConfig.longitude}|${MosqueConfig.minuteAdjustments}';
+    final prefs = await SharedPreferences.getInstance();
+    if (!force && prefs.getString('sched_sig') == signature) return;
+
+    await _plugin.cancelAll();
+    await prefs.setString('sched_sig', signature);
+    if (!enabled) return;
     final now = tz.TZDateTime.now(tz.local);
     var id = 0;
     for (var d = 0; d < _days; d++) {

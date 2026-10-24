@@ -16,7 +16,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // التنبيهات مدعومة على أندرويد وآيفون فقط؛ على الويب/الكمبيوتر نعرض الواجهة فقط.
   if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
-    await AdhanService.instance.init();
+    // بعد أول إطار حتى لا يؤخّر طلب الأذونات فتح التطبيق.
+    WidgetsBinding.instance.addPostFrameCallback((_) => AdhanService.instance.init());
   }
   Identity.instance.restore();
   runApp(const MosqueApp());

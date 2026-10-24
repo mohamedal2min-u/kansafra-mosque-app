@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/services.dart' show rootBundle;
 
 /// نص المصحف (الرسم العثماني) مضمّن في التطبيق، فتعمل القراءة بدون إنترنت.
@@ -10,8 +11,12 @@ class QuranData {
   static Future<void> load() async {
     if (_surahs != null) return;
     final raw = await rootBundle.loadString('assets/quran.json');
-    _surahs = (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
+    // التحليل في معالج منفصل حتى لا يتجمّد الرسم أثناء فتح تبويب القرآن.
+    _surahs = await compute(_parse, raw);
   }
+
+  static List<Map<String, dynamic>> _parse(String raw) =>
+      (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
 
   static const surahCount = 114;
 

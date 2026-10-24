@@ -15,7 +15,7 @@ class HeroBanner extends StatefulWidget {
   State<HeroBanner> createState() => _HeroBannerState();
 }
 
-class _HeroBannerState extends State<HeroBanner> {
+class _HeroBannerState extends State<HeroBanner> with WidgetsBindingObserver {
   final _controller = PageController();
   Timer? _timer;
   int _page = 0;
@@ -23,6 +23,12 @@ class _HeroBannerState extends State<HeroBanner> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _start();
+  }
+
+  void _start() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 6), (_) {
       if (!_controller.hasClients) return;
       final next = (_page + 1) % mosquePhotos.length;
@@ -30,8 +36,19 @@ class _HeroBannerState extends State<HeroBanner> {
     });
   }
 
+  // لا مؤقتات ولا حركة والتطبيق في الخلفية: توفير للبطارية.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _start();
+    } else {
+      _timer?.cancel();
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _controller.dispose();
     super.dispose();
@@ -75,7 +92,7 @@ class _HeroBannerState extends State<HeroBanner> {
             child: Row(children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.asset('assets/logo/icon.png', width: 44, height: 44),
+                child: Image.asset('assets/logo/logo_192.png', width: 44, height: 44, cacheWidth: 96),
               ),
               const SizedBox(width: 10),
               const Expanded(

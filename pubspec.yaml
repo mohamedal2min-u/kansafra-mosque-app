@@ -34,7 +34,7 @@ flutter:
     - assets/adhan/
     - assets/pay/
     - assets/photos/
-    - assets/logo/icon.png
+    - assets/logo/logo_192.png
 
 flutter_launcher_icons:
   android: true
