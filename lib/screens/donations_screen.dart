@@ -113,7 +113,7 @@ Future<void> _openShamCash(BuildContext context, DonationMethod m) async {
   }
   if (!opened && context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('نُسخ رقم الحساب. افتح تطبيق شام كاش والصقه في خانة التحويل.'),
+      content: Text('افتح تطبيق شام كاش وامسح الرمز، أو الصق رقم الحساب (نُسخ تلقائيًا) في خانة التحويل.'),
       duration: Duration(seconds: 6),
     ));
   }
@@ -133,11 +133,6 @@ class _MethodCard extends StatelessWidget {
           foregroundColor: Colors.white,
           child: Text(m.badge, style: const TextStyle(fontWeight: FontWeight.bold)),
         );
-
-  void _copy(BuildContext context) {
-    Clipboard.setData(ClipboardData(text: m.details));
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نسخ رقم الحساب')));
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -170,23 +165,13 @@ class _MethodCard extends StatelessWidget {
           const SizedBox(height: 10),
           const Text('افتح تطبيق شام كاش وامسح الرمز، أو انسخ رقم الحساب:', textAlign: TextAlign.center),
           const SizedBox(height: 10),
+          const Text('امسح الرمز بتطبيق شام كاش، أو اضغط الزر ليُفتح التطبيق:', textAlign: TextAlign.center),
+          const SizedBox(height: 8),
           FilledButton.icon(
             onPressed: () => _openShamCash(context, m),
             icon: const Icon(Icons.open_in_new_rounded),
             label: const Text('افتح شام كاش وتبرّع'),
           ),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-              child: SelectableText(
-                m.details,
-                textDirection: TextDirection.ltr,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-              ),
-            ),
-            IconButton(icon: const Icon(Icons.copy_rounded), tooltip: 'نسخ', onPressed: () => _copy(context)),
-          ]),
         ],
       ),
     );
