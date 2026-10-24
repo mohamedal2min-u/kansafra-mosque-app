@@ -26,13 +26,22 @@ jobs:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          if [ -n "$KS_B64" ]; then
-            echo "$KS_B64" | base64 -d > android/app/release.jks
-            printf 'storeFile=release.jks\nstorePassword=%s\nkeyPassword=%s\nkeyAlias=kansafra\n' "$KS_PASS" "$KS_PASS" > android/key.properties
-            echo "::notice::SIGNING=release-key"
-          else
-            echo "::notice::SIGNING=debug-key (secrets missing)"
+          if [ -z "$KS_B64" ]; then
+            echo "::notice::SIGNING=debug-key (secret ANDROID_KEYSTORE_BASE64 missing)"
+            exit 0
           fi
+          printf '%s' "$KS_B64" | tr -d ' \n\r\t"' > ks.b64
+          len=$(wc -c < ks.b64)
+          if ! base64 -d ks.b64 > android/app/release.jks 2>/dev/null; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not valid base64 (length after cleanup: $len, expected 3560). Paste it again as ONE line."
+            exit 1
+          fi
+          if ! keytool -list -keystore android/app/release.jks -storepass "$KS_PASS" >/dev/null 2>&1; then
+            echo "::error::Keystore decoded ($len chars) but cannot be opened: check ANDROID_KEYSTORE_PASSWORD or that the base64 is complete (expected length 3560)."
+            exit 1
+          fi
+          printf 'storeFile=release.jks\nstorePassword=%s\nkeyPassword=%s\nkeyAlias=kansafra\n' "$KS_PASS" "$KS_PASS" > android/key.properties
+          echo "::notice::SIGNING=release-key (base64 length $len)"
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos
       - name: Build APK
