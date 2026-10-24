@@ -160,7 +160,7 @@ class _HomeShellState extends State<HomeShell> {
                 Theme.of(context).brightness == Brightness.dark ? ThemeMode.light : ThemeMode.dark),
           ),
           IconButton(
-            icon: const Icon(Icons.account_circle),
+            icon: const _AccountAvatar(),
             tooltip: 'حسابي',
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccountScreen())),
           ),
@@ -209,6 +209,27 @@ class _HomeShellState extends State<HomeShell> {
           _item(4, Icons.settings_rounded, 'الإعدادات'),
         ]),
       ),
+    );
+  }
+}
+
+/// أيقونة الحساب أعلى التطبيق: صورة Google الشخصية إن سجّل المستخدم دخوله، وإلا أيقونة عامة.
+class _AccountAvatar extends StatelessWidget {
+  const _AccountAvatar();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Identity.instance,
+      builder: (context, _) {
+        final photo = Identity.instance.user?.photoUrl;
+        if (photo == null) return const Icon(Icons.account_circle);
+        return CircleAvatar(
+          radius: 14,
+          backgroundImage: NetworkImage(photo),
+          onBackgroundImageError: (_, __) {},
+        );
+      },
     );
   }
 }

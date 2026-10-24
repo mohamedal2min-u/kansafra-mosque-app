@@ -59,10 +59,12 @@ class _AccountScreenState extends State<AccountScreen> {
             builder: (context, _) => Card(
               margin: const EdgeInsets.all(12),
               child: ListTile(
-                leading: const Icon(Icons.account_circle),
-                title: Text(_id.user?.email ?? 'سجلّك محفوظ على هذا الجهاز'),
+                leading: _id.user?.photoUrl == null
+                    ? const Icon(Icons.account_circle, size: 40)
+                    : CircleAvatar(radius: 22, backgroundImage: NetworkImage(_id.user!.photoUrl!)),
+                title: Text(_id.user?.displayName ?? _id.user?.email ?? 'سجلّك محفوظ على هذا الجهاز'),
                 subtitle: Text(_id.googleEnabled
-                    ? (_id.user == null ? 'ادخل بحساب Google وينتقل سجلّ هذا الهاتف إلى حسابك لتراه من أي جهاز.' : 'سجلك مرتبط بحسابك.')
+                    ? (_id.user == null ? 'ادخل بحساب Google وينتقل سجلّ هذا الهاتف إلى حسابك لتراه من أي جهاز.' : '${_id.user!.email} • سجلك مرتبط بحسابك.')
                     : 'لا حاجة لتسجيل دخول.'),
                 trailing: _id.googleEnabled
                     ? TextButton(onPressed: _toggleSignIn, child: Text(_id.user == null ? 'دخول' : 'خروج'))
@@ -103,7 +105,14 @@ class _Donations extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const Center(child: Text('لا توجد تبرعات مسجّلة بعد.'));
+    if (items.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text('تظهر تبرعاتك هنا بعد تأكيد إدارة المسجد وصول الدفع.', textAlign: TextAlign.center),
+        ),
+      );
+    }
     final total = items.fold<double>(0, (s, d) => s + parseAmount(d.amount));
     return ListView(children: [
       ListTile(

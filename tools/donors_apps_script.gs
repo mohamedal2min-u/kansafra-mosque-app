@@ -52,7 +52,10 @@ function doGet(e) {
     });
   }
 
+  // إضافة متبرع: للمسؤول فقط (أو لخدمة الدفع لاحقًا) بمفتاح سرّي مخزَّن في Script Properties باسم ADMIN_KEY.
   if (p.action === 'add') {
+    const adminKey = PropertiesService.getScriptProperties().getProperty('ADMIN_KEY');
+    if (!adminKey || p.key !== adminKey) return json({ error: 'forbidden' });
     withLock(function () {
       ensureHeaders(sheet, DONOR_HEADERS);
       sheet.appendRow([new Date(), clean(p.name, 40) || 'فاعل خير', clean(p.amount, 20), owner]);

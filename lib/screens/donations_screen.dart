@@ -16,8 +16,8 @@ class _DonationsScreenState extends State<DonationsScreen> {
   Key _listKey = UniqueKey();
 
   Future<void> _donate() async {
-    final sent = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const MethodsPage()));
-    if (sent == true && mounted) setState(() => _listKey = UniqueKey());
+    await Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) => const MethodsPage()));
+    if (mounted) setState(() => _listKey = UniqueKey());
   }
 
   @override
@@ -90,23 +90,10 @@ class MethodsPage extends StatelessWidget {
             ),
           const SizedBox(height: 16),
           const Text(
-            'بعد التبرع سجّله هنا لتظهر في قائمة المتبرعين باسمك أو كفاعل خير.',
+            'تظهر أسماء المتبرعين ومبالغهم في القائمة بعد تأكيد إدارة المسجد وصول الدفع، ولا يكتبها المتبرع بنفسه.',
             textAlign: TextAlign.center,
           ),
         ],
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: FilledButton.icon(
-            onPressed: () async {
-              final sent = await showDonorForm(context);
-              if (sent && context.mounted) Navigator.of(context).pop(true);
-            },
-            icon: const Icon(Icons.edit_note),
-            label: const Text('سجّلت تبرعي'),
-          ),
-        ),
       ),
     );
   }
