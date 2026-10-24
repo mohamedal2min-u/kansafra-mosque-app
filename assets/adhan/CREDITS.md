@@ -1,6 +1,9 @@
 # مصادر تسجيلات الأذان
 
-- `voice1.mp3` (المؤذن 1، كامل): "Beautiful adhan.ogg" - Adam-synagda - CC0 (Wikimedia Commons)
-- `voice2.mp3` (المؤذن 2، قصير): "Oración Al-Azzan.ogg" - ملكية عامة (Wikimedia Commons)
+كلها من Wikimedia Commons بترخيص حر:
 
-نسخ من هذين الملفين في `android/app/src/main/res/raw/` (adhan_full.mp3 و adhan_short.mp3) لصوت تنبيه الأذان.
+- المؤذن 1 (`adhan_v1_*`): "Beautiful adhan.ogg" - Adam-synagda - CC0
+- المؤذن 2 (`adhan_v2_*`): "Oración Al-Azzan.ogg" - ملكية عامة (Public domain)
+
+لكل مؤذن نسختان: كاملة (`_long`) وقصيرة (`_short`)، بنفس الاسم في `assets/adhan/` (للاستماع داخل التطبيق)
+وفي `android/app/src/main/res/raw/` (لتنبيه الأذان والتطبيق مغلق). الملفات صغيرة (حوالي 40 kbps) ليبقى التطبيق خفيفًا.

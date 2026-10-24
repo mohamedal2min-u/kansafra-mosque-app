@@ -34,7 +34,7 @@ class AdhanService {
   Future<void> scheduleAll() async {
     await _plugin.cancelAll();
     if (!await AppSettings.adhanEnabled()) return;
-    final sound = await AppSettings.adhanSound();
+    final sound = await AppSettings.adhanChoice();
     final now = tz.TZDateTime.now(tz.local);
     var id = 0;
     for (var d = 0; d < _days; d++) {

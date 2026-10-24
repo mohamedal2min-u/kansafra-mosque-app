@@ -12,18 +12,18 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  AdhanSound _sound = AdhanSound.shortAdhan;
-  final _player = AudioPlayer();
-  AdhanSound? _playing;
+  AdhanChoice _choice = AdhanChoice(adhanVoices.first, false);
   bool _enabled = true;
+  final _player = AudioPlayer();
+  String? _playingId;
 
   @override
   void initState() {
     super.initState();
     () async {
-      final s = await AppSettings.adhanSound();
+      final c = await AppSettings.adhanChoice();
       final e = await AppSettings.adhanEnabled();
-      if (mounted) setState(() { _sound = s; _enabled = e; });
+      if (mounted) setState(() { _choice = c; _enabled = e; });
     }();
   }
 
@@ -33,25 +33,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
-  Future<void> _preview(AdhanSound s) async {
-    if (s.asset == null) return;
-    if (_playing == s) {
-      await _player.stop();
-      setState(() => _playing = null);
-      return;
-    }
-    setState(() => _playing = s);
-    try {
-      await _player.setAsset(s.asset!);
-      await _player.play();
-    } catch (_) {}
-    if (mounted) setState(() => _playing = null);
+  Future<void> _pick(AdhanChoice c) async {
+    setState(() => _choice = c);
+    await AppSettings.setAdhanChoice(c);
+    await AdhanService.instance.scheduleAll();
   }
 
-  Future<void> _apply() async => AdhanService.instance.scheduleAll();
+  Future<void> _preview(AdhanChoice c) async {
+    if (c.voice == null) return;
+    if (_playingId == c.id) {
+      await _player.stop();
+      setState(() => _playingId = null);
+      return;
+    }
+    setState(() => _playingId = c.id);
+    try {
+      await _player.setAsset(c.voice!.asset(c.long));
+      await _player.play();
+    } catch (_) {}
+    if (mounted) setState(() => _playingId = null);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final options = [
+      for (final v in adhanVoices) ...[AdhanChoice(v, false), AdhanChoice(v, true)],
+      const AdhanChoice(null, false),
+    ];
     return ListView(children: [
       SwitchListTile(
         title: const Text('تنبيه الأذان'),
@@ -59,39 +67,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
         onChanged: (v) async {
           setState(() => _enabled = v);
           await AppSettings.setAdhanEnabled(v);
-          await _apply();
+          await AdhanService.instance.scheduleAll();
         },
       ),
       const Padding(
         padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
         child: Text('صوت الأذان'),
       ),
-      RadioGroup<AdhanSound>(
-        groupValue: _sound,
-        onChanged: (v) async {
-          if (v == null) return;
-          setState(() => _sound = v);
-          await AppSettings.setAdhanSound(v);
-          await _apply();
+      RadioGroup<String>(
+        groupValue: _choice.id,
+        onChanged: (id) {
+          if (id != null) _pick(options.firstWhere((o) => o.id == id));
         },
         child: Column(children: [
-          for (final s in AdhanSound.values)
-            RadioListTile<AdhanSound>(
-              title: Text(s.label),
-              value: s,
-              secondary: s.asset == null
+          for (final o in options)
+            RadioListTile<String>(
+              title: Text(o.label),
+              value: o.id,
+              secondary: o.voice == null
                   ? null
                   : IconButton(
-                      icon: Icon(_playing == s ? Icons.stop_circle : Icons.play_circle),
+                      icon: Icon(_playingId == o.id ? Icons.stop_circle : Icons.play_circle),
                       tooltip: 'استماع',
-                      onPressed: () => _preview(s),
+                      onPressed: () => _preview(o),
                     ),
             ),
         ]),
       ),
       const Padding(
         padding: EdgeInsets.all(16),
-        child: Text('المؤذن 2 (القصير) هو الأنسب للتنبيه. الأذان الكامل طويل وقد يقطعه النظام. اضغط ▶ للاستماع قبل الاختيار.'),
+        child: Text('القصير هو الأنسب للتنبيه، وقد يقطع النظام الأذان الكامل. اضغط ▶ للاستماع قبل الاختيار.'),
       ),
     ]);
   }

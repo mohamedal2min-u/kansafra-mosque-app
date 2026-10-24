@@ -31,8 +31,7 @@ flutter:
   assets:
     - assets/quran.json
     - assets/LICENSE-quran.txt
-    - assets/adhan/voice1.mp3
-    - assets/adhan/voice2.mp3
+    - assets/adhan/
     - assets/logo/icon.png
 
 flutter_launcher_icons:
