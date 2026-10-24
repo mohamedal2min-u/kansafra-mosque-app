@@ -109,11 +109,24 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
           await AdhanService.instance.scheduleAll(force: true);
         },
       ),
-      ListTile(
-        leading: const Icon(Icons.battery_saver),
-        title: const Text('استثناء التطبيق من توفير البطارية'),
-        subtitle: const Text('يمنع بعض الهواتف من إيقاف الأذان في الخلفية.'),
-        onTap: () => AdhanService.instance.ignoreBatteryOptimizations(),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+        child: Text('المظهر'),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: ValueListenableBuilder<ThemeMode>(
+          valueListenable: ThemeController.mode,
+          builder: (_, m, __) => SegmentedButton<ThemeMode>(
+            segments: const [
+              ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.brightness_auto_rounded), label: Text('تلقائي')),
+              ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode_rounded), label: Text('فاتح')),
+              ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode_rounded), label: Text('داكن')),
+            ],
+            selected: {m},
+            onSelectionChanged: (s) => ThemeController.set(s.first),
+          ),
+        ),
       ),
       const Padding(
         padding: EdgeInsets.fromLTRB(16, 8, 16, 4),

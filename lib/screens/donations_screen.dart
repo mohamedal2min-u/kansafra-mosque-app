@@ -59,6 +59,8 @@ class MethodsPage extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
+          const _TrustRow(),
+          const SizedBox(height: 8),
           for (final m in MosqueConfig.donationMethods)
             Card(
               child: ListTile(
@@ -107,5 +109,31 @@ class MethodsPage extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// ثلاث نقاط ثقة صادقة: التطبيق لا يعالج الدفع ولا يحفظ بيانات البطاقة، والاسم اختياري.
+class _TrustRow extends StatelessWidget {
+  const _TrustRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    Widget item(IconData icon, String text) => Expanded(
+          child: Column(children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: scheme.primaryContainer,
+              child: Icon(icon, color: scheme.primary, size: 26),
+            ),
+            const SizedBox(height: 6),
+            Text(text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+          ]),
+        );
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      item(Icons.shield_rounded, 'لا نحفظ بيانات بطاقتك'),
+      item(Icons.lock_rounded, 'اسمك اختياري'),
+      item(Icons.verified_rounded, 'قائمة المتبرعين معلنة'),
+    ]);
   }
 }

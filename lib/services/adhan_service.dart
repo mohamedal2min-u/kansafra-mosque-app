@@ -40,11 +40,6 @@ class AdhanService {
     await scheduleAll(force: true);
   }
 
-  /// استثناء التطبيق من توفير البطارية حتى لا يوقف النظام التنبيهات في الخلفية.
-  Future<void> ignoreBatteryOptimizations() async {
-    await Permission.ignoreBatteryOptimizations.request();
-  }
-
   Future<void> init() async {
     tzdata.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation(MosqueConfig.timeZone));

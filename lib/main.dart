@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'account/account_screen.dart';
 import 'account/identity.dart';
 import 'config.dart';
+import 'settings.dart';
 import 'services/adhan_service.dart';
 import 'quran/quran_home.dart';
 import 'screens/donations_screen.dart';
@@ -19,6 +20,7 @@ Future<void> main() async {
     // بعد أول إطار حتى لا يؤخّر طلب الأذونات فتح التطبيق.
     WidgetsBinding.instance.addPostFrameCallback((_) => AdhanService.instance.init());
   }
+  await ThemeController.load();
   Identity.instance.restore();
   runApp(const MosqueApp());
 }
@@ -81,7 +83,10 @@ class MosqueApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeController.mode,
+      builder: (context, mode, _) => MaterialApp(
+      themeMode: mode,
       title: MosqueConfig.name,
       debugShowCheckedModeBanner: false,
       locale: const Locale('ar'),
@@ -94,6 +99,7 @@ class MosqueApp extends StatelessWidget {
       theme: _theme(Brightness.light),
       darkTheme: _theme(Brightness.dark),
       home: const HomeShell(),
+    ),
     );
   }
 }
@@ -146,6 +152,12 @@ class _HomeShellState extends State<HomeShell> {
       appBar: AppBar(
         title: const Text(MosqueConfig.name),
         actions: [
+          IconButton(
+            icon: Icon(Theme.of(context).brightness == Brightness.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+            tooltip: 'فاتح / داكن',
+            onPressed: () => ThemeController.set(
+                Theme.of(context).brightness == Brightness.dark ? ThemeMode.light : ThemeMode.dark),
+          ),
           IconButton(
             icon: const Icon(Icons.account_circle),
             tooltip: 'حسابي',

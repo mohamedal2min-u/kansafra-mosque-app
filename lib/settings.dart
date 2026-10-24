@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// مؤذن مضمّن في التطبيق. لإضافة مؤذن: ضع الملفين adhan_<raw>_long.mp3 و adhan_<raw>_short.mp3
@@ -54,4 +55,20 @@ class AppSettings {
 
   static Future<void> setAdhanEnabled(bool v) async =>
       (await SharedPreferences.getInstance()).setBool(_kEnabled, v);
+}
+
+/// وضع المظهر: تلقائي (حسب الهاتف) أو فاتح أو داكن، ويُحفظ.
+class ThemeController {
+  static const _k = 'theme_mode';
+  static final mode = ValueNotifier<ThemeMode>(ThemeMode.system);
+
+  static Future<void> load() async {
+    final v = (await SharedPreferences.getInstance()).getString(_k);
+    mode.value = ThemeMode.values.where((m) => m.name == v).firstOrNull ?? ThemeMode.system;
+  }
+
+  static Future<void> set(ThemeMode m) async {
+    mode.value = m;
+    await (await SharedPreferences.getInstance()).setString(_k, m.name);
+  }
 }
