@@ -1,9 +1,6 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 
+import '../config.dart';
 import 'donors_repository.dart';
 
 class DonorsTab extends StatefulWidget {
@@ -14,7 +11,9 @@ class DonorsTab extends StatefulWidget {
 }
 
 class _DonorsTabState extends State<DonorsTab> {
-  late Future<List<Donor>> _future = donorsRepository.approvedDonors();
+  late Future<List<Donor>> _future = donorsRepository.donors();
+
+  void _reload() => setState(() => _future = donorsRepository.donors());
 
   Future<void> _openForm() async {
     final sent = await showModalBottomSheet<bool>(
@@ -23,10 +22,8 @@ class _DonorsTabState extends State<DonorsTab> {
       builder: (_) => const _DonorForm(),
     );
     if (sent == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('جزاك الله خيرًا. سيظهر اسمك بعد تأكيد إدارة المسجد.')),
-      );
-      setState(() => _future = donorsRepository.approvedDonors());
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('جزاك الله خيرًا وتقبّل منك')));
+      _reload();
     }
   }
 
@@ -38,31 +35,53 @@ class _DonorsTabState extends State<DonorsTab> {
         icon: const Icon(Icons.favorite),
         label: const Text('سجّل تبرعي'),
       ),
-      body: FutureBuilder<List<Donor>>(
-        future: _future,
-        builder: (context, snap) {
-          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-          final list = snap.data!;
-          if (list.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('لا يوجد متبرعون بعد.\nبعد تبرعك اضغط «سجّل تبرعي» لتظهر باسمك أو كفاعل خير.',
-                    textAlign: TextAlign.center),
-              ),
-            );
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.only(bottom: 88),
-            itemCount: list.length,
-            itemBuilder: (context, i) => ListTile(
-              leading: const Icon(Icons.volunteer_activism),
-              title: Text(list[i].displayName),
-              trailing: Text(DateFormat.yMMMd('ar').format(list[i].date)),
-            ),
-          );
-        },
-      ),
+      body: Column(children: [
+        if (MosqueConfig.donorsUrl.isEmpty)
+          const MaterialBanner(
+            content: Text('وضع تجريبي: الأسماء تظهر على هذا الجهاز فقط حتى يُربط الجدول المشترك.'),
+            actions: [SizedBox.shrink()],
+          ),
+        Expanded(
+          child: FutureBuilder<List<Donor>>(
+            future: _future,
+            builder: (context, snap) {
+              if (snap.connectionState != ConnectionState.done) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snap.hasError) {
+                return Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    const Text('تعذّر تحميل القائمة. تحقّق من الإنترنت.'),
+                    const SizedBox(height: 12),
+                    FilledButton(onPressed: _reload, child: const Text('إعادة المحاولة')),
+                  ]),
+                );
+              }
+              final list = snap.data!;
+              if (list.isEmpty) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text('لا يوجد متبرعون بعد.\nاضغط «سجّل تبرعي» لتظهر باسمك أو كفاعل خير.',
+                        textAlign: TextAlign.center),
+                  ),
+                );
+              }
+              return RefreshIndicator(
+                onRefresh: () async => _reload(),
+                child: ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 88),
+                  itemCount: list.length,
+                  itemBuilder: (context, i) => ListTile(
+                    leading: const Icon(Icons.volunteer_activism),
+                    title: Text(list[i].line),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ]),
     );
   }
 }
@@ -76,21 +95,29 @@ class _DonorForm extends StatefulWidget {
 
 class _DonorFormState extends State<_DonorForm> {
   final _name = TextEditingController();
+  final _amount = TextEditingController();
   bool _anonymous = false;
   bool _busy = false;
-  // رمز قصير بدون حروف متشابهة (0/O و1/I).
-  final String _ref = List.generate(5, (_) => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[Random().nextInt(31)]).join();
+  String? _error;
 
   @override
   void dispose() {
     _name.dispose();
+    _amount.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
-    setState(() => _busy = true);
-    await donorsRepository.submit(name: _anonymous ? null : _name.text.trim(), reference: _ref);
-    if (mounted) Navigator.of(context).pop(true);
+    setState(() { _busy = true; _error = null; });
+    try {
+      await donorsRepository.add(
+        name: _anonymous ? null : _name.text.trim(),
+        amount: _amount.text.trim(),
+      );
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (_) {
+      if (mounted) setState(() { _busy = false; _error = 'تعذّر الإرسال. تحقّق من الإنترنت وأعد المحاولة.'; });
+    }
   }
 
   @override
@@ -110,16 +137,17 @@ class _DonorFormState extends State<_DonorForm> {
             decoration: const InputDecoration(labelText: 'الاسم الذي يظهر في القائمة'),
             onChanged: (_) => setState(() {}),
           ),
-        const SizedBox(height: 12),
-        ListTile(
-          title: Text('رمز تبرعك: $_ref'),
-          subtitle: const Text('اكتبه في ملاحظة التحويل ليظهر اسمك بعد التأكد من وصول التبرع.'),
-          trailing: IconButton(
-            icon: const Icon(Icons.copy),
-            onPressed: () => Clipboard.setData(ClipboardData(text: _ref)),
-          ),
-        ),
         const SizedBox(height: 8),
+        TextField(
+          controller: _amount,
+          decoration: const InputDecoration(labelText: 'المبلغ (اختياري)'),
+        ),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          ),
+        const SizedBox(height: 12),
         FilledButton(
           onPressed: canSend && !_busy ? _submit : null,
           child: const Text('إرسال'),

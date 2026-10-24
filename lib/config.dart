@@ -5,6 +5,9 @@ class MosqueConfig {
   static const latitude = 35.65862402383966;
   static const longitude = 36.48396655620541;
 
+  /// رابط Web app لجدول المتبرعين (انظر tools/DONORS_SETUP.md). فارغ = قائمة تجريبية على هذا الجهاز فقط.
+  static const donorsUrl = '';
+
   /// المنطقة الزمنية لجدولة التنبيهات.
   static const timeZone = 'Asia/Damascus';
 
