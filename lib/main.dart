@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -8,7 +9,10 @@ import 'screens/prayer_times_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AdhanService.instance.init();
+  // التنبيهات مدعومة على أندرويد وآيفون فقط؛ على الويب/الكمبيوتر نعرض الواجهة فقط.
+  if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+    await AdhanService.instance.init();
+  }
   runApp(const MosqueApp());
 }
 
