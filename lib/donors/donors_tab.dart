@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../config.dart';
 import 'donors_repository.dart';
@@ -8,6 +9,11 @@ class DonorsTab extends StatefulWidget {
 
   @override
   State<DonorsTab> createState() => _DonorsTabState();
+}
+
+String _when(DateTime d) {
+  final l = d.toLocal();
+  return '${DateFormat.yMMMd('ar').format(l)} - ${DateFormat.jm('ar').format(l)}';
 }
 
 class _DonorsTabState extends State<DonorsTab> {
@@ -57,7 +63,8 @@ class _DonorsTabState extends State<DonorsTab> {
                   ]),
                 );
               }
-              final list = snap.data!;
+              // الأحدث أولًا.
+              final list = [...snap.data!]..sort((a, b) => b.date.compareTo(a.date));
               if (list.isEmpty) {
                 return const Center(
                   child: Padding(
@@ -74,10 +81,16 @@ class _DonorsTabState extends State<DonorsTab> {
                   padding: const EdgeInsets.only(bottom: 88),
                   children: [
                     if (top.isNotEmpty) _TopDonors(top),
+                    if (top.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                        child: Text('آخر التبرعات', style: Theme.of(context).textTheme.titleSmall),
+                      ),
                     for (final d in list)
                       ListTile(
                         leading: const Icon(Icons.volunteer_activism),
                         title: Text(d.line),
+                        subtitle: Text(_when(d.date)),
                       ),
                   ],
                 ),
@@ -183,7 +196,7 @@ class _TopDonors extends StatelessWidget {
             ListTile(
               leading: Icon(Icons.star, size: 36, color: _colors[i]),
               title: Text(top[i].name),
-              subtitle: Text(_titles[i]),
+              subtitle: Text('${_titles[i]} • ${top[i].count == 1 ? 'تبرع واحد' : '${top[i].count} تبرعات'}'),
               trailing: Text(_fmt(top[i].total), style: Theme.of(context).textTheme.titleMedium),
             ),
         ]),

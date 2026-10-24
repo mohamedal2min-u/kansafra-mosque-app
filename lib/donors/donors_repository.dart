@@ -27,24 +27,28 @@ double parseAmount(String s) {
 class TopDonor {
   final String name;
   final double total;
-  const TopDonor(this.name, this.total);
+  final int count;
+  const TopDonor(this.name, this.total, this.count);
 }
 
 /// أعلى [n] متبرعين بالمبلغ. الأسماء المتشابهة تُجمع، وفاعل الخير يبقى كل تبرع بمفرده.
 List<TopDonor> topDonors(List<Donor> donors, {int n = 3}) {
-  final named = <String, double>{};
+  final totals = <String, double>{};
+  final counts = <String, int>{};
   final entries = <TopDonor>[];
   for (final d in donors) {
     final a = parseAmount(d.amount);
     if (a <= 0) continue;
     final anon = d.name.trim().isEmpty || d.name.trim() == 'فاعل خير';
     if (anon) {
-      entries.add(TopDonor('فاعل خير', a));
+      entries.add(TopDonor('فاعل خير', a, 1));
     } else {
-      named[d.name.trim()] = (named[d.name.trim()] ?? 0) + a;
+      final k = d.name.trim();
+      totals[k] = (totals[k] ?? 0) + a;
+      counts[k] = (counts[k] ?? 0) + 1;
     }
   }
-  entries.addAll(named.entries.map((e) => TopDonor(e.key, e.value)));
+  entries.addAll(totals.entries.map((e) => TopDonor(e.key, e.value, counts[e.key]!)));
   entries.sort((a, b) => b.total.compareTo(a.total));
   return entries.take(n).toList();
 }
