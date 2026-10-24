@@ -17,6 +17,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
   bool _enabled = true;
   AudioPlayer? _player; // يُنشأ عند أول استماع فقط
   String? _playingId;
+  String _query = '';
 
   @override
   void initState() {
@@ -74,6 +75,11 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
   Widget build(BuildContext context) {
     final selected = _choice.voice?.id ?? 'default';
     final perm = _perm;
+    final q = _query.trim();
+    final voices = [
+      for (final v in adhanVoices)
+        if (q.isEmpty || v.name.contains(q) || v.id == selected) v,
+    ];
     return ListView(children: [
       if (perm != null && !perm.ok)
         Card(
@@ -134,6 +140,19 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
         padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
         child: Text('المؤذن'),
       ),
+      if (adhanVoices.length > 8)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: TextField(
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              hintText: 'ابحث عن مؤذن',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (t) => setState(() => _query = t),
+          ),
+        ),
       RadioGroup<String>(
         groupValue: selected,
         onChanged: (id) {
@@ -142,7 +161,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
           _pick(AdhanChoice(v, _choice.long));
         },
         child: Column(children: [
-          for (final v in adhanVoices)
+          for (final v in voices)
             RadioListTile<String>(
               title: Text(v.name),
               value: v.id,
@@ -159,7 +178,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
         title: const Text('مصادر تسجيلات الأذان'),
         children: [
           for (final v in adhanVoices)
-            ListTile(dense: true, title: Text(v.name), subtitle: Text('${v.credit} (Wikimedia Commons)')),
+            ListTile(dense: true, title: Text(v.name), subtitle: Text(v.credit)),
         ],
       ),
     ]);

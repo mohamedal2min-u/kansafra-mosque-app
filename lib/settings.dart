@@ -14,10 +14,10 @@ class AdhanVoice {
 }
 
 const adhanVoices = <AdhanVoice>[
-  AdhanVoice('voice1', 'v1', 'أذان هادئ', 'Adam-synagda - CC0'),
-  AdhanVoice('voice2', 'v2', 'أذان مختصر', 'ملكية عامة'),
-  AdhanVoice('voice3', 'v3', 'عاقب عزيز', 'Atcovi - CC BY-SA 4.0'),
-  AdhanVoice('voice4', 'v4', 'الحرم المكي (2013)', 'Seyfula Islam - CC BY 3.0'),
+  AdhanVoice('voice1', 'v1', 'أذان هادئ', 'Wikimedia Commons - Adam-synagda - CC0'),
+  AdhanVoice('voice2', 'v2', 'أذان مختصر', 'Wikimedia Commons - ملكية عامة'),
+  AdhanVoice('voice3', 'v3', 'عاقب عزيز', 'Wikimedia Commons - Atcovi - CC BY-SA 4.0'),
+  AdhanVoice('voice4', 'v4', 'الحرم المكي (2013)', 'Wikimedia Commons - Seyfula Islam - CC BY 3.0'),
   AdhanVoice('voice5', 'v5', 'علي ملا (الحرم المكي)', 'archive.org - الرخصة غير محددة'),
   AdhanVoice('voice6', 'v6', 'مشاري العفاسي', 'archive.org - الرخصة غير محددة'),
   AdhanVoice('voice7', 'v7', 'ناصر القطامي', 'archive.org - الرخصة غير محددة'),
