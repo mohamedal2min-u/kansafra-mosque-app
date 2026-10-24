@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 
 import '../services/adhan_service.dart';
 import '../settings.dart';
@@ -11,7 +12,9 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  AdhanSound _sound = AdhanSound.defaultSound;
+  AdhanSound _sound = AdhanSound.shortAdhan;
+  final _player = AudioPlayer();
+  AdhanSound? _playing;
   bool _enabled = true;
 
   @override
@@ -22,6 +25,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final e = await AppSettings.adhanEnabled();
       if (mounted) setState(() { _sound = s; _enabled = e; });
     }();
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _preview(AdhanSound s) async {
+    if (s.asset == null) return;
+    if (_playing == s) {
+      await _player.stop();
+      setState(() => _playing = null);
+      return;
+    }
+    setState(() => _playing = s);
+    try {
+      await _player.setAsset(s.asset!);
+      await _player.play();
+    } catch (_) {}
+    if (mounted) setState(() => _playing = null);
   }
 
   Future<void> _apply() async => AdhanService.instance.scheduleAll();
@@ -52,12 +76,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
         },
         child: Column(children: [
           for (final s in AdhanSound.values)
-            RadioListTile<AdhanSound>(title: Text(s.label), value: s),
+            RadioListTile<AdhanSound>(
+              title: Text(s.label),
+              value: s,
+              secondary: s.asset == null
+                  ? null
+                  : IconButton(
+                      icon: Icon(_playing == s ? Icons.stop_circle : Icons.play_circle),
+                      tooltip: 'استماع',
+                      onPressed: () => _preview(s),
+                    ),
+            ),
         ]),
       ),
       const Padding(
         padding: EdgeInsets.all(16),
-        child: Text('الأذان القصير هو الأنسب للتنبيهات. الأذان الكامل طويل وقد يقطعه النظام.'),
+        child: Text('المؤذن 2 (القصير) هو الأنسب للتنبيه. الأذان الكامل طويل وقد يقطعه النظام. اضغط ▶ للاستماع قبل الاختيار.'),
       ),
     ]);
   }

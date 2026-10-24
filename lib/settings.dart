@@ -2,17 +2,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// صوت تنبيه الأذان. الملفان الصوتيان يوضعان في android/app/src/main/res/raw/
 enum AdhanSound {
-  defaultSound('default', 'صوت الإشعار العادي', null),
-  shortAdhan('adhan_short', 'أذان قصير', 'adhan_short'),
-  fullAdhan('adhan_full', 'أذان كامل', 'adhan_full');
+  defaultSound('default', 'صوت الإشعار العادي', null, null),
+  shortAdhan('adhan_short', 'المؤذن 2 (قصير)', 'adhan_short', 'assets/adhan/voice2.mp3'),
+  fullAdhan('adhan_full', 'المؤذن 1 (كامل)', 'adhan_full', 'assets/adhan/voice1.mp3');
 
   final String id;
   final String label;
   final String? rawName;
-  const AdhanSound(this.id, this.label, this.rawName);
+  final String? asset;
+  const AdhanSound(this.id, this.label, this.rawName, this.asset);
 
   static AdhanSound fromId(String? id) =>
-      values.firstWhere((e) => e.id == id, orElse: () => defaultSound);
+      values.firstWhere((e) => e.id == id, orElse: () => shortAdhan);
 }
 
 class AppSettings {
