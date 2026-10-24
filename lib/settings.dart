@@ -6,15 +6,24 @@ class AdhanVoice {
   final String id;
   final String raw; // أحرف إنجليزية صغيرة وأرقام فقط
   final String name;
-  const AdhanVoice(this.id, this.raw, this.name);
+  final String credit; // الترخيص والمؤلف (ملف assets/adhan/CREDITS.md)
+  const AdhanVoice(this.id, this.raw, this.name, this.credit);
 
   String rawName(bool long) => 'adhan_${raw}_${long ? 'long' : 'short'}';
   String asset(bool long) => 'assets/adhan/${rawName(long)}.mp3';
 }
 
 const adhanVoices = <AdhanVoice>[
-  AdhanVoice('voice1', 'v1', 'المؤذن 1'),
-  AdhanVoice('voice2', 'v2', 'المؤذن 2'),
+  AdhanVoice('voice1', 'v1', 'أذان هادئ', 'Adam-synagda - CC0'),
+  AdhanVoice('voice2', 'v2', 'أذان مختصر', 'ملكية عامة'),
+  AdhanVoice('voice3', 'v3', 'عاقب عزيز', 'Atcovi - CC BY-SA 4.0'),
+  AdhanVoice('voice4', 'v4', 'الحرم المكي (2013)', 'Seyfula Islam - CC BY 3.0'),
+  AdhanVoice('voice5', 'v5', 'مسجد شالقار', 'Esetok - CC BY-SA 4.0'),
+  AdhanVoice('voice6', 'v6', 'مسجد الحسن الثاني', 'Fraguando - CC BY-SA 4.0'),
+  AdhanVoice('voice7', 'v7', 'قونية', 'Frans van der Vaart - CC BY 3.0'),
+  AdhanVoice('voice8', 'v8', 'أذان مغاربي', 'Mahfoudou - CC BY-SA 4.0'),
+  AdhanVoice('voice9', 'v9', 'إسطنبول', 'Viceskeeni2 - CC0'),
+  AdhanVoice('voice10', 'v10', 'الحرم المكي - أذان المغرب', '3omar Faruq - CC BY 3.0'),
 ];
 
 /// اختيار المستخدم لصوت التنبيه. [voice] فارغ يعني صوت الإشعار العادي.

@@ -15,6 +15,40 @@ class Donor {
   String get line => amount.trim().isEmpty ? '$displayName تبرّع' : '$displayName تبرّع بـ ${amount.trim()}';
 }
 
+/// يستخرج أول رقم من نص المبلغ (يدعم الأرقام العربية الهندية). 0 إن لم يوجد.
+double parseAmount(String s) {
+  const ar = '٠١٢٣٤٥٦٧٨٩';
+  final t = s.split('').map((c) => ar.contains(c) ? '${ar.indexOf(c)}' : c).join().replaceAll(',', '');
+  final m = RegExp(r'\d+(\.\d+)?').firstMatch(t);
+  return m == null ? 0 : double.parse(m.group(0)!);
+}
+
+/// مجموع تبرعات اسم واحد. «فاعل خير» لا يُجمع لأنهم أشخاص مختلفون.
+class TopDonor {
+  final String name;
+  final double total;
+  const TopDonor(this.name, this.total);
+}
+
+/// أعلى [n] متبرعين بالمبلغ. الأسماء المتشابهة تُجمع، وفاعل الخير يبقى كل تبرع بمفرده.
+List<TopDonor> topDonors(List<Donor> donors, {int n = 3}) {
+  final named = <String, double>{};
+  final entries = <TopDonor>[];
+  for (final d in donors) {
+    final a = parseAmount(d.amount);
+    if (a <= 0) continue;
+    final anon = d.name.trim().isEmpty || d.name.trim() == 'فاعل خير';
+    if (anon) {
+      entries.add(TopDonor('فاعل خير', a));
+    } else {
+      named[d.name.trim()] = (named[d.name.trim()] ?? 0) + a;
+    }
+  }
+  entries.addAll(named.entries.map((e) => TopDonor(e.key, e.value)));
+  entries.sort((a, b) => b.total.compareTo(a.total));
+  return entries.take(n).toList();
+}
+
 abstract class DonorsRepository {
   Future<List<Donor>> donors();
   Future<void> add({String? name, String? amount});

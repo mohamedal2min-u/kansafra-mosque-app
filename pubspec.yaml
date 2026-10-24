@@ -19,7 +19,6 @@ dependencies:
   just_audio: ^0.10.6
   shared_preferences: ^2.5.6
   hijri: ^3.0.1
-  flutter_compass: ^0.8.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -32,6 +31,7 @@ flutter:
     - assets/quran.json
     - assets/LICENSE-quran.txt
     - assets/adhan/
+    - assets/pay/
     - assets/logo/icon.png
 
 flutter_launcher_icons:

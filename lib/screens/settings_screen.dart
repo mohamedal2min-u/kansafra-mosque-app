@@ -39,16 +39,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await AdhanService.instance.scheduleAll();
   }
 
-  Future<void> _preview(AdhanChoice c) async {
-    if (c.voice == null) return;
-    if (_playingId == c.id) {
+  Future<void> _preview(AdhanVoice v) async {
+    final id = '${v.id}_${_choice.long}';
+    if (_playingId == id) {
       await _player.stop();
       setState(() => _playingId = null);
       return;
     }
-    setState(() => _playingId = c.id);
+    setState(() => _playingId = id);
     try {
-      await _player.setAsset(c.voice!.asset(c.long));
+      await _player.setAsset(v.asset(_choice.long));
       await _player.play();
     } catch (_) {}
     if (mounted) setState(() => _playingId = null);
@@ -56,10 +56,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final options = [
-      for (final v in adhanVoices) ...[AdhanChoice(v, false), AdhanChoice(v, true)],
-      const AdhanChoice(null, false),
-    ];
+    final selected = _choice.voice?.id ?? 'default';
     return ListView(children: [
       SwitchListTile(
         title: const Text('تنبيه الأذان'),
@@ -71,32 +68,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
         },
       ),
       const Padding(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
-        child: Text('صوت الأذان'),
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+        child: Text('طول الأذان'),
       ),
-      RadioGroup<String>(
-        groupValue: _choice.id,
-        onChanged: (id) {
-          if (id != null) _pick(options.firstWhere((o) => o.id == id));
-        },
-        child: Column(children: [
-          for (final o in options)
-            RadioListTile<String>(
-              title: Text(o.label),
-              value: o.id,
-              secondary: o.voice == null
-                  ? null
-                  : IconButton(
-                      icon: Icon(_playingId == o.id ? Icons.stop_circle : Icons.play_circle),
-                      tooltip: 'استماع',
-                      onPressed: () => _preview(o),
-                    ),
-            ),
-        ]),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: SegmentedButton<bool>(
+          segments: const [
+            ButtonSegment(value: false, label: Text('قصير')),
+            ButtonSegment(value: true, label: Text('كامل')),
+          ],
+          selected: {_choice.long},
+          onSelectionChanged: (s) => _pick(AdhanChoice(_choice.voice, s.first)),
+        ),
       ),
       const Padding(
-        padding: EdgeInsets.all(16),
-        child: Text('القصير هو الأنسب للتنبيه، وقد يقطع النظام الأذان الكامل. اضغط ▶ للاستماع قبل الاختيار.'),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+        child: Text('المؤذن'),
+      ),
+      RadioGroup<String>(
+        groupValue: selected,
+        onChanged: (id) {
+          if (id == null) return;
+          final v = adhanVoices.where((e) => e.id == id).firstOrNull;
+          _pick(AdhanChoice(v, _choice.long));
+        },
+        child: Column(children: [
+          for (final v in adhanVoices)
+            RadioListTile<String>(
+              title: Text(v.name),
+              value: v.id,
+              secondary: IconButton(
+                icon: Icon(_playingId == '${v.id}_${_choice.long}' ? Icons.stop_circle : Icons.play_circle),
+                tooltip: 'استماع',
+                onPressed: () => _preview(v),
+              ),
+            ),
+          const RadioListTile<String>(title: Text('صوت الإشعار العادي'), value: 'default'),
+        ]),
+      ),
+      ExpansionTile(
+        title: const Text('مصادر تسجيلات الأذان'),
+        children: [
+          for (final v in adhanVoices)
+            ListTile(dense: true, title: Text(v.name), subtitle: Text('${v.credit} (Wikimedia Commons)')),
+        ],
       ),
     ]);
   }

@@ -6,8 +6,8 @@ import 'config.dart';
 import 'services/adhan_service.dart';
 import 'quran/quran_home.dart';
 import 'screens/donations_screen.dart';
-import 'screens/qibla_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/support_screen.dart';
 import 'screens/prayer_times_screen.dart';
 
 Future<void> main() async {
@@ -52,7 +52,7 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
-  static const _pages = [PrayerTimesScreen(), QuranHome(), QiblaScreen(), DonationsScreen(), SettingsScreen()];
+  static const _pages = [PrayerTimesScreen(), QuranHome(), SupportScreen(), DonationsScreen(), SettingsScreen()];
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +65,7 @@ class _HomeShellState extends State<HomeShell> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.access_time), label: 'الأذان'),
           NavigationDestination(icon: Icon(Icons.menu_book), label: 'القرآن'),
-          NavigationDestination(icon: Icon(Icons.explore), label: 'القبلة'),
+          NavigationDestination(icon: Icon(Icons.support_agent), label: 'الدعم'),
           NavigationDestination(icon: Icon(Icons.volunteer_activism), label: 'التبرعات'),
           NavigationDestination(icon: Icon(Icons.settings), label: 'الإعدادات'),
         ],

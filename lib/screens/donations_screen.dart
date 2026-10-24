@@ -36,11 +36,16 @@ class _Methods extends StatelessWidget {
         for (final m in MosqueConfig.donationMethods)
           Card(
             child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Color(m.color),
-                foregroundColor: Colors.white,
-                child: Text(m.badge, style: const TextStyle(fontWeight: FontWeight.bold)),
-              ),
+              leading: m.logo != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(m.logo!, width: 64, height: 40, fit: BoxFit.cover),
+                    )
+                  : CircleAvatar(
+                      backgroundColor: Color(m.color),
+                      foregroundColor: Colors.white,
+                      child: Text(m.badge, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ),
               title: Text(m.title),
               subtitle: Text(m.details.isEmpty ? 'تُضاف بيانات الحساب قريبًا' : m.details),
               trailing: m.details.isEmpty

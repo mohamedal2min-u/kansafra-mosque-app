@@ -67,15 +67,19 @@ class _DonorsTabState extends State<DonorsTab> {
                   ),
                 );
               }
+              final top = topDonors(list);
               return RefreshIndicator(
                 onRefresh: () async => _reload(),
-                child: ListView.builder(
+                child: ListView(
                   padding: const EdgeInsets.only(bottom: 88),
-                  itemCount: list.length,
-                  itemBuilder: (context, i) => ListTile(
-                    leading: const Icon(Icons.volunteer_activism),
-                    title: Text(list[i].line),
-                  ),
+                  children: [
+                    if (top.isNotEmpty) _TopDonors(top),
+                    for (final d in list)
+                      ListTile(
+                        leading: const Icon(Icons.volunteer_activism),
+                        title: Text(d.line),
+                      ),
+                  ],
                 ),
               );
             },
@@ -153,6 +157,37 @@ class _DonorFormState extends State<_DonorForm> {
           child: const Text('إرسال'),
         ),
       ]),
+    );
+  }
+}
+
+/// أعلى ثلاثة متبرعين: نجمة ذهبية وفضية وبرونزية.
+class _TopDonors extends StatelessWidget {
+  final List<TopDonor> top;
+  const _TopDonors(this.top);
+
+  static const _colors = [Color(0xFFE2B33C), Color(0xFF9AA3AD), Color(0xFFB4783F)];
+  static const _titles = ['المركز الأول', 'المركز الثاني', 'المركز الثالث'];
+
+  String _fmt(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.all(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(children: [
+          Text('أعلى المتبرعين', style: Theme.of(context).textTheme.titleMedium),
+          for (var i = 0; i < top.length; i++)
+            ListTile(
+              leading: Icon(Icons.star, size: 36, color: _colors[i]),
+              title: Text(top[i].name),
+              subtitle: Text(_titles[i]),
+              trailing: Text(_fmt(top[i].total), style: Theme.of(context).textTheme.titleMedium),
+            ),
+        ]),
+      ),
     );
   }
 }

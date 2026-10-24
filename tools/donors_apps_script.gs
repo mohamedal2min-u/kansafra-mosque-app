@@ -5,6 +5,22 @@ const MAX_ROWS = 200;
 function doGet(e) {
   const p = e.parameter || {};
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  if (p.action === 'support') {
+    const lock = LockService.getScriptLock();
+    lock.waitLock(10000);
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      let sup = ss.getSheetByName('الدعم');
+      if (!sup) {
+        sup = ss.insertSheet('الدعم');
+        sup.appendRow(['التاريخ', 'الاسم', 'الهاتف', 'النوع', 'الرسالة']);
+      }
+      sup.appendRow([new Date(), clean(p.name, 40), clean(p.phone, 20), clean(p.type, 20), clean(p.message, 500)]);
+    } finally {
+      lock.releaseLock();
+    }
+    return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+  }
   if (p.action === 'add') {
     const lock = LockService.getScriptLock();
     lock.waitLock(10000);
