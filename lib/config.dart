@@ -22,7 +22,16 @@ class MosqueConfig {
 
   /// طرق التبرع. اترك [DonationMethod.details] فارغًا حتى تُضاف البيانات الحقيقية من إدارة المسجد.
   static const donationMethods = <DonationMethod>[
-    DonationMethod(title: 'شام كاش', badge: '', color: 0xFF1E8E5A, logo: 'assets/pay/shamcash.png'),
+    DonationMethod(
+      title: 'شام كاش',
+      badge: '',
+      color: 0xFF1E8E5A,
+      logo: 'assets/pay/shamcash.png',
+      // رقم الحساب مأخوذ من رمز QR المرسل من لجنة المسجد.
+      details: '1dff3aa4e6d84e983b48c4f8ad6480b8',
+      holder: 'توفيق أبو محمد',
+      qr: 'assets/pay/shamcash_qr.jpg',
+    ),
     DonationMethod(title: 'بطاقات الدفع', badge: '', color: 0xFF1A3C6E, logo: 'assets/pay/cards.png'),
     DonationMethod(title: 'PayPal', badge: '', color: 0xFF0070BA, logo: 'assets/pay/paypal.png'),
   ];
@@ -34,5 +43,15 @@ class DonationMethod {
   final String badge;
   final int color;
   final String? logo;
-  const DonationMethod({required this.title, this.details = '', required this.badge, required this.color, this.logo});
+  final String? holder; // اسم صاحب الحساب
+  final String? qr; // صورة رمز QR للمسح
+  const DonationMethod({
+    required this.title,
+    this.details = '',
+    required this.badge,
+    required this.color,
+    this.logo,
+    this.holder,
+    this.qr,
+  });
 }
