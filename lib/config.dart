@@ -16,7 +16,7 @@ class MosqueConfig {
 
   /// أسماء حزم تطبيق شام كاش المحتملة لفتحه بزر «افتح شام كاش». تُضاف بعد معرفة الاسم الصحيح،
   /// ويُضاف الاسم نفسه في <queries> داخل AndroidManifest.xml.
-  static const shamCashPackages = <String>[];
+  static const shamCashPackages = <String>['com.shmacash.shamcash'];
 
   /// المنطقة الزمنية لجدولة التنبيهات.
   static const timeZone = 'Asia/Damascus';
