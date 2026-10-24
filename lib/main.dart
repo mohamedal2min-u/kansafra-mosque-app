@@ -4,7 +4,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'config.dart';
 import 'services/adhan_service.dart';
+import 'quran/quran_home.dart';
 import 'screens/donations_screen.dart';
+import 'screens/settings_screen.dart';
 import 'screens/prayer_times_screen.dart';
 
 Future<void> main() async {
@@ -49,7 +51,7 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
-  static const _pages = [PrayerTimesScreen(), DonationsScreen()];
+  static const _pages = [PrayerTimesScreen(), QuranHome(), DonationsScreen(), SettingsScreen()];
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +63,9 @@ class _HomeShellState extends State<HomeShell> {
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.access_time), label: 'الأذان'),
+          NavigationDestination(icon: Icon(Icons.menu_book), label: 'القرآن'),
           NavigationDestination(icon: Icon(Icons.volunteer_activism), label: 'التبرعات'),
+          NavigationDestination(icon: Icon(Icons.settings), label: 'الإعدادات'),
         ],
       ),
     );

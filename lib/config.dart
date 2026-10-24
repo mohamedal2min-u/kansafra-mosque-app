@@ -2,9 +2,8 @@
 class MosqueConfig {
   static const name = 'مسجد كنصفرة الكبير';
 
-  // إحداثيات تقريبية لبلدة كنصفرة (جبل الزاوية، إدلب) - يُرجى التأكد منها.
-  static const latitude = 35.68;
-  static const longitude = 36.38;
+  static const latitude = 35.65862402383966;
+  static const longitude = 36.48396655620541;
 
   /// المنطقة الزمنية لجدولة التنبيهات.
   static const timeZone = 'Asia/Damascus';

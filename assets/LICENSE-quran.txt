@@ -1,0 +1,1 @@
+Quran text (Uthmani) bundled from the 'quran' Dart package v1.3.1 (MIT License, Copyright (c) 2023 Aqeel).

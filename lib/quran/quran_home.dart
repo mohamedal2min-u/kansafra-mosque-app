@@ -1,0 +1,32 @@
+import 'package:flutter/material.dart';
+
+import 'listen_screen.dart';
+import 'quran_data.dart';
+import 'reader_screen.dart';
+
+class QuranHome extends StatelessWidget {
+  const QuranHome({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<void>(
+      future: QuranData.load(),
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return _tabs();
+      },
+    );
+  }
+
+  Widget _tabs() {
+    return const DefaultTabController(
+      length: 2,
+      child: Column(children: [
+        TabBar(tabs: [Tab(text: 'قراءة (بدون إنترنت)'), Tab(text: 'استماع')]),
+        Expanded(child: TabBarView(children: [SurahListScreen(), ListenScreen()])),
+      ]),
+    );
+  }
+}

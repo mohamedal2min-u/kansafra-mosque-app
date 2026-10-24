@@ -3,6 +3,7 @@ import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../config.dart';
+import '../settings.dart';
 import 'prayer_calc.dart';
 
 /// جدولة تنبيه الأذان لخمس صلوات على مدى 7 أيام، وتُعاد الجدولة عند كل فتح للتطبيق.
@@ -32,6 +33,8 @@ class AdhanService {
 
   Future<void> scheduleAll() async {
     await _plugin.cancelAll();
+    if (!await AppSettings.adhanEnabled()) return;
+    final sound = await AppSettings.adhanSound();
     final now = tz.TZDateTime.now(tz.local);
     var id = 0;
     for (var d = 0; d < _days; d++) {
@@ -53,15 +56,19 @@ class AdhanService {
           'حان الآن موعد أذان ${PrayerCalc.names[e.key]}',
           MosqueConfig.name,
           at,
-          const NotificationDetails(
+          NotificationDetails(
             android: AndroidNotificationDetails(
-              'adhan',
-              'الأذان',
+              // صوت القناة لا يتغير بعد إنشائها، فلكل صوت قناة مستقلة.
+              'adhan_${sound.id}',
+              'الأذان (${sound.label})',
               channelDescription: 'تنبيهات أوقات الصلاة',
               importance: Importance.max,
               priority: Priority.high,
+              sound: sound.rawName == null
+                  ? null
+                  : RawResourceAndroidNotificationSound(sound.rawName),
             ),
-            iOS: DarwinNotificationDetails(presentSound: true),
+            iOS: const DarwinNotificationDetails(presentSound: true),
           ),
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           uiLocalNotificationDateInterpretation:

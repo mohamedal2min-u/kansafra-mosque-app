@@ -2,9 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../config.dart';
+import '../donors/donors_tab.dart';
 
 class DonationsScreen extends StatelessWidget {
   const DonationsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Column(children: const [
+        TabBar(tabs: [Tab(text: 'طرق التبرع'), Tab(text: 'المتبرعون')]),
+        Expanded(child: TabBarView(children: [_Methods(), DonorsTab()])),
+      ]),
+    );
+  }
+}
+
+class _Methods extends StatelessWidget {
+  const _Methods();
 
   @override
   Widget build(BuildContext context) {
