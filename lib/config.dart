@@ -14,6 +14,10 @@ class MosqueConfig {
   static const googleWebClientId =
       '843002779261-9mp73ui95d4f2h3hha9399m05bg3d611.apps.googleusercontent.com';
 
+  /// أسماء حزم تطبيق شام كاش المحتملة لفتحه بزر «افتح شام كاش». تُضاف بعد معرفة الاسم الصحيح،
+  /// ويُضاف الاسم نفسه في <queries> داخل AndroidManifest.xml.
+  static const shamCashPackages = <String>[];
+
   /// المنطقة الزمنية لجدولة التنبيهات.
   static const timeZone = 'Asia/Damascus';
 

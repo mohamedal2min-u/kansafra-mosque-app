@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../config.dart';
@@ -99,6 +100,25 @@ class _TrustRow extends StatelessWidget {
   }
 }
 
+const _launcher = MethodChannel('kansafra/launcher');
+
+/// ينسخ رقم الحساب ثم يحاول فتح شام كاش. إن لم يُفتح يطلب من المستخدم فتحه ولصق الرقم.
+Future<void> _openShamCash(BuildContext context, DonationMethod m) async {
+  await Clipboard.setData(ClipboardData(text: m.details));
+  var opened = false;
+  if (!kIsWeb && MosqueConfig.shamCashPackages.isNotEmpty) {
+    try {
+      opened = await _launcher.invokeMethod<bool>('openApp', {'packages': MosqueConfig.shamCashPackages}) ?? false;
+    } catch (_) {}
+  }
+  if (!opened && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('نُسخ رقم الحساب. افتح تطبيق شام كاش والصقه في خانة التحويل.'),
+      duration: Duration(seconds: 6),
+    ));
+  }
+}
+
 class _MethodCard extends StatelessWidget {
   final DonationMethod m;
   const _MethodCard(this.m);
@@ -149,7 +169,13 @@ class _MethodCard extends StatelessWidget {
             ),
           const SizedBox(height: 10),
           const Text('افتح تطبيق شام كاش وامسح الرمز، أو انسخ رقم الحساب:', textAlign: TextAlign.center),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            onPressed: () => _openShamCash(context, m),
+            icon: const Icon(Icons.open_in_new_rounded),
+            label: const Text('افتح شام كاش وتبرّع'),
+          ),
+          const SizedBox(height: 8),
           Row(children: [
             Expanded(
               child: SelectableText(
