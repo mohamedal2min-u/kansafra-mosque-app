@@ -6,7 +6,8 @@ class MosqueConfig {
   static const longitude = 36.48396655620541;
 
   /// رابط Web app لجدول المتبرعين (انظر tools/DONORS_SETUP.md). فارغ = قائمة تجريبية على هذا الجهاز فقط.
-  static const donorsUrl = '';
+  static const donorsUrl =
+      'https://script.google.com/macros/s/AKfycbyCZUIZbzX263x3MBMpB4AAc8-p7ZBTaWf_AZineSAZuR543p60bD35SLRwnTgR08Gimw/exec';
 
   /// المنطقة الزمنية لجدولة التنبيهات.
   static const timeZone = 'Asia/Damascus';
