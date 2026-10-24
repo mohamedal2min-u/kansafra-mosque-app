@@ -1,18 +1,13 @@
-import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../config.dart';
+import '../services/prayer_calc.dart';
 
 class PrayerTimesScreen extends StatelessWidget {
   const PrayerTimesScreen({super.key});
 
-  PrayerTimes _times() {
-    final params = CalculationMethod.muslim_world_league.getParameters()
-      ..madhab = Madhab.shafi;
-    final coords = Coordinates(MosqueConfig.latitude, MosqueConfig.longitude);
-    return PrayerTimes.today(coords, params);
-  }
+  PrayerTimes _times() => PrayerCalc.forDate(DateTime.now());
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +38,7 @@ class PrayerTimesScreen extends StatelessWidget {
             child: ListTile(
               title: Text(r.$1),
               trailing: Text(
-                fmt.format(r.$3.add(Duration(minutes: MosqueConfig.minuteAdjustments[r.$2] ?? 0))),
+                fmt.format(PrayerCalc.adjusted(r.$2, r.$3)),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),

@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'config.dart';
+import 'services/adhan_service.dart';
 import 'screens/donations_screen.dart';
 import 'screens/prayer_times_screen.dart';
 
-void main() => runApp(const MosqueApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AdhanService.instance.init();
+  runApp(const MosqueApp());
+}
 
 class MosqueApp extends StatelessWidget {
   const MosqueApp({super.key});

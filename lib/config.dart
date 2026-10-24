@@ -6,6 +6,9 @@ class MosqueConfig {
   static const latitude = 35.68;
   static const longitude = 36.38;
 
+  /// المنطقة الزمنية لجدولة التنبيهات.
+  static const timeZone = 'Asia/Damascus';
+
   /// تعديل دقائق لكل صلاة لمطابقة جدول المسجد (مثال: {'fajr': 2}).
   static const minuteAdjustments = <String, int>{};
 
