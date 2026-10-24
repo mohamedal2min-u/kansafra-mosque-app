@@ -5,6 +5,7 @@ import 'package:hijri/hijri_calendar.dart';
 import 'package:intl/intl.dart';
 
 import '../services/prayer_calc.dart';
+import '../widgets/hero_banner.dart';
 
 class PrayerTimesScreen extends StatefulWidget {
   const PrayerTimesScreen({super.key});
@@ -64,8 +65,8 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Center(child: Image.asset('assets/logo/icon.png', height: 84)),
-        const SizedBox(height: 8),
+        const HeroBanner(),
+        const SizedBox(height: 12),
         Text(
           '${DateFormat.yMMMMEEEEd('ar').format(_now)}\n${h.hDay} ${h.longMonthName} ${h.hYear} هـ',
           textAlign: TextAlign.center,

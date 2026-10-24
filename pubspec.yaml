@@ -33,6 +33,7 @@ flutter:
     - assets/LICENSE-quran.txt
     - assets/adhan/
     - assets/pay/
+    - assets/photos/
     - assets/logo/icon.png
 
 flutter_launcher_icons:
