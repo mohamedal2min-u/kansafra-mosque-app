@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import 'donors_repository.dart';
@@ -75,6 +78,8 @@ class _DonorFormState extends State<_DonorForm> {
   final _name = TextEditingController();
   bool _anonymous = false;
   bool _busy = false;
+  // رمز قصير بدون حروف متشابهة (0/O و1/I).
+  final String _ref = List.generate(5, (_) => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[Random().nextInt(31)]).join();
 
   @override
   void dispose() {
@@ -84,7 +89,7 @@ class _DonorFormState extends State<_DonorForm> {
 
   Future<void> _submit() async {
     setState(() => _busy = true);
-    await donorsRepository.submit(name: _anonymous ? null : _name.text.trim());
+    await donorsRepository.submit(name: _anonymous ? null : _name.text.trim(), reference: _ref);
     if (mounted) Navigator.of(context).pop(true);
   }
 
@@ -105,7 +110,16 @@ class _DonorFormState extends State<_DonorForm> {
             decoration: const InputDecoration(labelText: 'الاسم الذي يظهر في القائمة'),
             onChanged: (_) => setState(() {}),
           ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
+        ListTile(
+          title: Text('رمز تبرعك: $_ref'),
+          subtitle: const Text('اكتبه في ملاحظة التحويل ليظهر اسمك بعد التأكد من وصول التبرع.'),
+          trailing: IconButton(
+            icon: const Icon(Icons.copy),
+            onPressed: () => Clipboard.setData(ClipboardData(text: _ref)),
+          ),
+        ),
+        const SizedBox(height: 8),
         FilledButton(
           onPressed: canSend && !_busy ? _submit : null,
           child: const Text('إرسال'),

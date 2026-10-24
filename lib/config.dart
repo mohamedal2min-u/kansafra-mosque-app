@@ -11,16 +11,18 @@ class MosqueConfig {
   /// تعديل دقائق لكل صلاة لمطابقة جدول المسجد (مثال: {'fajr': 2}).
   static const minuteAdjustments = <String, int>{};
 
-  /// طرق التبرع - ضع بيانات المسجد الحقيقية (لا تُنشر أرقام غير مؤكدة).
+  /// طرق التبرع. اترك [DonationMethod.details] فارغًا حتى تُضاف البيانات الحقيقية من إدارة المسجد.
   static const donationMethods = <DonationMethod>[
-    DonationMethod(title: 'تحويل بنكي', details: 'اسم الحساب / الرقم: (يُضاف من إدارة المسجد)'),
-    DonationMethod(title: 'شام كاش', details: 'الرقم: (يُضاف من إدارة المسجد)'),
-    DonationMethod(title: 'التسليم المباشر', details: 'لدى لجنة المسجد بعد الصلاة'),
+    DonationMethod(title: 'شام كاش', badge: 'ش', color: 0xFF1E8E5A),
+    DonationMethod(title: 'بطاقات الدفع (Visa / Mastercard)', badge: '💳', color: 0xFF1A3C6E),
+    DonationMethod(title: 'PayPal', badge: 'P', color: 0xFF0070BA),
   ];
 }
 
 class DonationMethod {
   final String title;
   final String details;
-  const DonationMethod({required this.title, required this.details});
+  final String badge;
+  final int color;
+  const DonationMethod({required this.title, this.details = '', required this.badge, required this.color});
 }

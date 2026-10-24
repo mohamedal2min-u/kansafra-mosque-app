@@ -12,8 +12,9 @@ class Donor {
 abstract class DonorsRepository {
   Future<List<Donor>> approvedDonors();
 
+  /// [reference] رمز يكتبه المتبرع في ملاحظة التحويل ليطابقه المسؤول مع كشف الحساب.
   /// يرسل طلب ظهور في القائمة. لا يظهر الاسم إلا بعد موافقة إدارة المسجد.
-  Future<void> submit({String? name});
+  Future<void> submit({String? name, required String reference});
 }
 
 /// تنفيذ مؤقت داخل الذاكرة للتجربة فقط: لا يحفظ ولا يشارك البيانات بين الأجهزة.
@@ -24,7 +25,7 @@ class InMemoryDonorsRepository implements DonorsRepository {
   Future<List<Donor>> approvedDonors() async => List.unmodifiable(_approved);
 
   @override
-  Future<void> submit({String? name}) async {}
+  Future<void> submit({String? name, required String reference}) async {}
 }
 
 DonorsRepository donorsRepository = InMemoryDonorsRepository();

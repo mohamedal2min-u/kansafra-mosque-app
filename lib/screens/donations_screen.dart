@@ -36,18 +36,25 @@ class _Methods extends StatelessWidget {
         for (final m in MosqueConfig.donationMethods)
           Card(
             child: ListTile(
-              title: Text(m.title),
-              subtitle: Text(m.details),
-              trailing: IconButton(
-                icon: const Icon(Icons.copy),
-                tooltip: 'نسخ',
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: m.details));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('تم النسخ')),
-                  );
-                },
+              leading: CircleAvatar(
+                backgroundColor: Color(m.color),
+                foregroundColor: Colors.white,
+                child: Text(m.badge, style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
+              title: Text(m.title),
+              subtitle: Text(m.details.isEmpty ? 'تُضاف بيانات الحساب قريبًا' : m.details),
+              trailing: m.details.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.copy),
+                      tooltip: 'نسخ',
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: m.details));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('تم النسخ')),
+                        );
+                      },
+                    ),
             ),
           ),
       ],
