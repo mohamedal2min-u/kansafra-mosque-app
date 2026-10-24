@@ -18,6 +18,10 @@ class MosqueConfig {
   /// ويُضاف الاسم نفسه في <queries> داخل AndroidManifest.xml.
   static const shamCashPackages = <String>['com.shmacash.shamcash'];
 
+  /// رابط الدفع العميق لشام كاش (https://deeplink.shamcash.sy/payment...). قالب يمكن أن يحتوي {account}.
+  /// فارغ = يُفتح التطبيق فقط. يُضبط بعد معرفة شكل الرابط الذي ينشئه شام كاش.
+  static const shamCashPayUrl = '';
+
   /// المنطقة الزمنية لجدولة التنبيهات.
   static const timeZone = 'Asia/Damascus';
 

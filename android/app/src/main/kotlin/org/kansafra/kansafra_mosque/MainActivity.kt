@@ -13,13 +13,30 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 if (call.method == "openApp") {
                     val packages = call.argument<List<String>>("packages") ?: emptyList()
+                    val url = call.argument<String>("url")
                     for (pkg in packages) {
-                        val intent: Intent? = packageManager.getLaunchIntentForPackage(pkg)
+                        // إن وُجد رابط: افتحه داخل التطبيق نفسه مباشرة (رابط الدفع العميق).
+                        val intent: Intent? = if (!url.isNullOrEmpty()) {
+                            Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).setPackage(pkg)
+                        } else {
+                            packageManager.getLaunchIntentForPackage(pkg)
+                        }
                         if (intent != null) {
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            startActivity(intent)
-                            result.success(true)
-                            return@setMethodCallHandler
+                            try {
+                                startActivity(intent)
+                                result.success(true)
+                                return@setMethodCallHandler
+                            } catch (e: Exception) {
+                                // لا يوجد من يعالج الرابط: نجرّب فتح التطبيق فقط.
+                                val plain = packageManager.getLaunchIntentForPackage(pkg)
+                                if (plain != null) {
+                                    plain.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    startActivity(plain)
+                                    result.success(true)
+                                    return@setMethodCallHandler
+                                }
+                            }
                         }
                     }
                     result.success(false)

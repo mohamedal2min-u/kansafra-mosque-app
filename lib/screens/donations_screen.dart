@@ -108,7 +108,12 @@ Future<void> _openShamCash(BuildContext context, DonationMethod m) async {
   var opened = false;
   if (!kIsWeb && MosqueConfig.shamCashPackages.isNotEmpty) {
     try {
-      opened = await _launcher.invokeMethod<bool>('openApp', {'packages': MosqueConfig.shamCashPackages}) ?? false;
+      final url = MosqueConfig.shamCashPayUrl.replaceAll('{account}', m.details);
+      opened = await _launcher.invokeMethod<bool>('openApp', {
+            'packages': MosqueConfig.shamCashPackages,
+            if (url.isNotEmpty) 'url': url,
+          }) ??
+          false;
     } catch (_) {}
   }
   if (!opened && context.mounted) {
