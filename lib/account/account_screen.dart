@@ -114,7 +114,7 @@ class _Donations extends StatelessWidget {
       const Divider(),
       for (final d in items)
         ListTile(
-          leading: const Icon(Icons.volunteer_activism),
+          leading: Icon(Icons.favorite_rounded, color: Theme.of(context).colorScheme.tertiary),
           title: Text(d.amount.isEmpty ? 'تبرّعت' : 'تبرّعت بـ ${d.amount}'),
           subtitle: Text('${_when(d.date)}${d.name.isEmpty ? '' : ' • ${d.name}'}'),
         ),

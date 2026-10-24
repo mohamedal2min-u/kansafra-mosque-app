@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:hijri/hijri_calendar.dart';
@@ -17,6 +18,14 @@ class PrayerTimesScreen extends StatefulWidget {
 class _PrayerTimesScreenState extends State<PrayerTimesScreen> with WidgetsBindingObserver {
   static const _order = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'];
   static const _labels = {'sunrise': 'الشروق', ...PrayerCalc.names};
+  static const _icons = {
+    'fajr': Icons.nightlight_round,
+    'sunrise': Icons.wb_twilight_rounded,
+    'dhuhr': Icons.wb_sunny_rounded,
+    'asr': Icons.sunny,
+    'maghrib': Icons.nights_stay_rounded,
+    'isha': Icons.bedtime_rounded,
+  };
 
   Timer? _timer;
   // العدّاد يتحدّث بدون إعادة بناء الشاشة كلها، فيبقى الاستهلاك قليلًا.
@@ -117,35 +126,106 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> with WidgetsBindi
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 12),
-        Card(
-          color: scheme.primary,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+        _NextPrayerCard(label: _labels[_nextKey]!, countdown: _countdown),
+        const SizedBox(height: 6),
+        for (final k in _order)
+          Card(
+            color: k == _nextKey ? scheme.primaryContainer : null,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: BorderSide(
+                color: k == _nextKey ? scheme.tertiary : scheme.outlineVariant.withValues(alpha: 0.6),
+                width: k == _nextKey ? 1.6 : 1,
+              ),
+            ),
+            child: ListTile(
+              leading: CircleAvatar(
+                radius: 20,
+                backgroundColor: k == _nextKey ? scheme.tertiary : scheme.primaryContainer,
+                child: Icon(_icons[k], color: k == _nextKey ? Colors.white : scheme.primary, size: 22),
+              ),
+              title: Text(_labels[k]!, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              subtitle: k == _nextKey ? const Text('الصلاة القادمة') : null,
+              trailing: Text(fmt.format(_today[k]!),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// بطاقة الصلاة القادمة: تدرّج أخضر مع زخرفة نجمية خفيفة وعدّاد ذهبي.
+class _NextPrayerCard extends StatelessWidget {
+  final String label;
+  final ValueNotifier<String> countdown;
+  const _NextPrayerCard({required this.label, required this.countdown});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+            colors: [Color(0xFF1C6B45), Color(0xFF0A3B25)],
+          ),
+        ),
+        child: CustomPaint(
+          painter: _StarPatternPainter(),
+          child: SizedBox(
+            width: double.infinity,
             child: Column(children: [
-              Text('الصلاة القادمة: ${_labels[_nextKey]}', style: TextStyle(color: scheme.onPrimary)),
-              const SizedBox(height: 4),
+              Text('الصلاة القادمة', style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 14)),
+              Text(label, style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 6),
               ValueListenableBuilder<String>(
-                valueListenable: _countdown,
+                valueListenable: countdown,
                 builder: (_, v, __) => Text(
                   v,
-                  style: TextStyle(
-                    color: scheme.onPrimary, fontSize: 36,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+                  style: const TextStyle(
+                    color: Color(0xFFF1D58A), fontSize: 40, fontWeight: FontWeight.w700,
+                    fontFeatures: [FontFeature.tabularFigures()],
                   ),
                 ),
               ),
             ]),
           ),
         ),
-        for (final k in _order)
-          Card(
-            color: k == _nextKey ? scheme.primaryContainer : null,
-            child: ListTile(
-              title: Text(_labels[k]!),
-              trailing: Text(fmt.format(_today[k]!), style: Theme.of(context).textTheme.titleMedium),
-            ),
-          ),
-      ],
+      ),
     );
   }
+}
+
+class _StarPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.07)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    const step = 46.0;
+    for (var y = 0.0; y < size.height + step; y += step) {
+      for (var x = 0.0; x < size.width + step; x += step) {
+        final c = Offset(x, y);
+        // نجمة ثمانية من مربعين متداخلين
+        for (var k = 0; k < 2; k++) {
+          final path = Path();
+          for (var i = 0; i < 4; i++) {
+            final a = math.pi / 4 * (k * 1) + math.pi / 2 * i;
+            final p = c + Offset(math.cos(a), math.sin(a)) * 16;
+            i == 0 ? path.moveTo(p.dx, p.dy) : path.lineTo(p.dx, p.dy);
+          }
+          path.close();
+          canvas.drawPath(path, paint);
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

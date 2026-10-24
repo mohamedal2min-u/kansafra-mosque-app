@@ -30,7 +30,7 @@ class _DonationsScreenState extends State<DonationsScreen> {
         child: FilledButton.icon(
           style: FilledButton.styleFrom(
             backgroundColor: scheme.tertiary,
-            foregroundColor: const Color(0xFF14301F),
+            foregroundColor: Colors.white,
             minimumSize: const Size.fromHeight(54),
           ),
           onPressed: _donate,

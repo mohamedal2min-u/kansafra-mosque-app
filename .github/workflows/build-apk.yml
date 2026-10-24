@@ -21,6 +21,18 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prepare signing key (if secrets are set)
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > android/app/release.jks
+            printf 'storeFile=release.jks\nstorePassword=%s\nkeyPassword=%s\nkeyAlias=kansafra\n' "$KS_PASS" "$KS_PASS" > android/key.properties
+            echo "Signing with the release key"
+          else
+            echo "No release key: debug signing"
+          fi
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos
       - name: Build APK

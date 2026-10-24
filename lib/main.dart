@@ -23,38 +23,56 @@ Future<void> main() async {
   runApp(const MosqueApp());
 }
 
+const kGreen = Color(0xFF0F5A38);
+const kGold = Color(0xFFB8902F);
+
 ThemeData _theme(Brightness b) {
-  final scheme = ColorScheme.fromSeed(
-    seedColor: const Color(0xFF1B6B3F),
-    brightness: b,
-    tertiary: const Color(0xFFC9A24A), // ذهبي للتبرع والتمييز
+  final dark = b == Brightness.dark;
+  final base = ColorScheme.fromSeed(seedColor: kGreen, brightness: b);
+  final scheme = base.copyWith(
+    primary: dark ? const Color(0xFF7CD3A6) : kGreen,
+    onPrimary: dark ? const Color(0xFF06271A) : Colors.white,
+    primaryContainer: dark ? const Color(0xFF1C4A33) : const Color(0xFFD9ECE0),
+    onPrimaryContainer: dark ? const Color(0xFFD9ECE0) : const Color(0xFF0A3B25),
+    tertiary: dark ? const Color(0xFFE2B957) : kGold,
+    surface: dark ? const Color(0xFF0E1A14) : const Color(0xFFF7F3E8),
+    onSurface: dark ? const Color(0xFFE8EFEA) : const Color(0xFF1B2A22),
+    surfaceContainerHighest: dark ? const Color(0xFF18281F) : Colors.white,
   );
   return ThemeData(
     colorScheme: scheme,
     useMaterial3: true,
+    fontFamily: 'Tajawal',
     scaffoldBackgroundColor: scheme.surface,
     appBarTheme: AppBarTheme(
       centerTitle: true,
       backgroundColor: scheme.surface,
       surfaceTintColor: Colors.transparent,
-      titleTextStyle: TextStyle(color: scheme.onSurface, fontSize: 19, fontWeight: FontWeight.bold),
+      titleTextStyle: TextStyle(fontFamily: 'Tajawal', color: scheme.primary, fontSize: 20, fontWeight: FontWeight.w700),
     ),
     cardTheme: CardThemeData(
       elevation: 0,
-      color: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: scheme.surfaceContainerHighest,
+      margin: const EdgeInsets.symmetric(vertical: 5),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
     ),
     listTileTheme: const ListTileThemeData(contentPadding: EdgeInsets.symmetric(horizontal: 16)),
     inputDecorationTheme: InputDecorationTheme(
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      filled: true,
+      fillColor: scheme.surfaceContainerHighest,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        minimumSize: const Size.fromHeight(52),
+        textStyle: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     ),
+    bottomAppBarTheme: BottomAppBarThemeData(color: scheme.surfaceContainerHighest, surfaceTintColor: Colors.transparent),
   );
 }
 
@@ -103,9 +121,17 @@ class _HomeShellState extends State<HomeShell> {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, color: color),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+              decoration: BoxDecoration(
+                color: selected ? scheme.primaryContainer : Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
             const SizedBox(height: 2),
-            Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: selected ? FontWeight.bold : null)),
+            Text(label, style: TextStyle(fontSize: 11.5, color: color, fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
           ]),
         ),
       ),
@@ -137,10 +163,10 @@ class _HomeShellState extends State<HomeShell> {
           shape: const CircleBorder(),
           elevation: donating ? 8 : 4,
           backgroundColor: scheme.tertiary,
-          foregroundColor: const Color(0xFF14301F),
+          foregroundColor: Colors.white,
           tooltip: 'التبرعات',
           onPressed: () => setState(() => _index = _donate),
-          child: const Icon(Icons.volunteer_activism, size: 34),
+          child: const Icon(Icons.volunteer_activism_rounded, size: 34),
         ),
       ),
       bottomNavigationBar: BottomAppBar(
@@ -149,8 +175,8 @@ class _HomeShellState extends State<HomeShell> {
         padding: EdgeInsets.zero,
         height: 64,
         child: Row(children: [
-          _item(0, Icons.access_time, 'الأذان'),
-          _item(1, Icons.menu_book, 'القرآن'),
+          _item(0, Icons.access_time_filled_rounded, 'الأذان'),
+          _item(1, Icons.menu_book_rounded, 'القرآن'),
           // مكان الزر الأوسط
           SizedBox(
             width: 84,
@@ -163,8 +189,8 @@ class _HomeShellState extends State<HomeShell> {
               ),
             ),
           ),
-          _item(3, Icons.support_agent, 'الدعم'),
-          _item(4, Icons.settings, 'الإعدادات'),
+          _item(3, Icons.support_agent_rounded, 'الدعم'),
+          _item(4, Icons.settings_rounded, 'الإعدادات'),
         ]),
       ),
     );
