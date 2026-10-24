@@ -51,7 +51,7 @@ class _DonorsListState extends State<DonorsList> {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(24),
-                    child: Text('لا يوجد متبرعون بعد.\nاضغط «سجّل تبرعي» لتظهر باسمك أو كفاعل خير.',
+                    child: Text('لا يوجد متبرعون بعد.\nتظهر الأسماء هنا بعد تأكيد إدارة المسجد وصول التبرع.',
                         textAlign: TextAlign.center),
                   ),
                 );
