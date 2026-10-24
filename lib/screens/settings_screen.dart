@@ -55,8 +55,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
   }
 
   Future<void> _preview(AdhanVoice v) async {
-    // المعاينة بمقطع قصير فقط (الأذان الكامل يُشغَّل عند وقت الصلاة)، لتخفيف حجم التطبيق.
-    final id = v.id;
+    final id = '${v.id}_${_choice.long}';
     if (_playingId == id) {
       await _player?.stop();
       setState(() => _playingId = null);
@@ -65,7 +64,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
     setState(() => _playingId = id);
     try {
       final player = _player ??= AudioPlayer();
-      await player.setAsset(v.asset(false));
+      await player.setAsset(v.asset(_choice.long));
       await player.play();
     } catch (_) {}
     if (mounted) setState(() => _playingId = null);
@@ -148,8 +147,8 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
               title: Text(v.name),
               value: v.id,
               secondary: IconButton(
-                icon: Icon(_playingId == v.id ? Icons.stop_circle : Icons.play_circle),
-                tooltip: 'استماع لمقطع',
+                icon: Icon(_playingId == '${v.id}_${_choice.long}' ? Icons.stop_circle : Icons.play_circle),
+                tooltip: 'استماع',
                 onPressed: () => _preview(v),
               ),
             ),
