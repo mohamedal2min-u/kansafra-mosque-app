@@ -4,11 +4,11 @@ import 'package:intl/intl.dart';
 import '../config.dart';
 import 'donors_repository.dart';
 
-class DonorsTab extends StatefulWidget {
-  const DonorsTab({super.key});
+class DonorsList extends StatefulWidget {
+  const DonorsList({super.key});
 
   @override
-  State<DonorsTab> createState() => _DonorsTabState();
+  State<DonorsList> createState() => _DonorsListState();
 }
 
 String _when(DateTime d) {
@@ -16,32 +16,14 @@ String _when(DateTime d) {
   return '${DateFormat.yMMMd('ar').format(l)} - ${DateFormat.jm('ar').format(l)}';
 }
 
-class _DonorsTabState extends State<DonorsTab> {
+class _DonorsListState extends State<DonorsList> {
   late Future<List<Donor>> _future = donorsRepository.donors();
 
   void _reload() => setState(() => _future = donorsRepository.donors());
 
-  Future<void> _openForm() async {
-    final sent = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => const _DonorForm(),
-    );
-    if (sent == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('جزاك الله خيرًا وتقبّل منك')));
-      _reload();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openForm,
-        icon: const Icon(Icons.favorite),
-        label: const Text('سجّل تبرعي'),
-      ),
-      body: Column(children: [
+    return Column(children: [
         if (MosqueConfig.donorsUrl.isEmpty)
           const MaterialBanner(
             content: Text('وضع تجريبي: الأسماء تظهر على هذا الجهاز فقط حتى يُربط الجدول المشترك.'),
@@ -98,9 +80,21 @@ class _DonorsTabState extends State<DonorsTab> {
             },
           ),
         ),
-      ]),
-    );
+    ]);
   }
+}
+
+/// نموذج تسجيل التبرع. يرجع true إن أُرسل بنجاح.
+Future<bool> showDonorForm(BuildContext context) async {
+  final sent = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => const _DonorForm(),
+  );
+  if (sent == true && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('جزاك الله خيرًا وتقبّل منك')));
+  }
+  return sent == true;
 }
 
 class _DonorForm extends StatefulWidget {
