@@ -34,7 +34,6 @@ class MosqueConfig {
       // رقم الحساب مأخوذ من رمز QR المرسل من لجنة المسجد.
       details: '1dff3aa4e6d84e983b48c4f8ad6480b8',
       holder: 'توفيق أبو محمد',
-      qr: 'assets/pay/shamcash_qr.jpg',
     ),
     DonationMethod(title: 'بطاقات الدفع', badge: '', color: 0xFF1A3C6E, logo: 'assets/pay/cards.png'),
     DonationMethod(title: 'PayPal', badge: '', color: 0xFF0070BA, logo: 'assets/pay/paypal.png'),

@@ -157,15 +157,8 @@ class _MethodCard extends StatelessWidget {
         subtitle: m.holder == null ? null : Text('باسم: ${m.holder}'),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
-          if (m.qr != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.asset(m.qr!, width: 260, cacheWidth: 600, fit: BoxFit.contain),
-            ),
           const SizedBox(height: 10),
-          const Text('افتح تطبيق شام كاش وامسح الرمز، أو انسخ رقم الحساب:', textAlign: TextAlign.center),
-          const SizedBox(height: 10),
-          const Text('امسح الرمز بتطبيق شام كاش، أو اضغط الزر ليُفتح التطبيق:', textAlign: TextAlign.center),
+          const Text('اضغط الزر ليُفتح تطبيق شام كاش، ثم الصق رقم الحساب (نُسخ تلقائيًا) واكتب المبلغ:', textAlign: TextAlign.center),
           const SizedBox(height: 8),
           FilledButton.icon(
             onPressed: () => _openShamCash(context, m),
