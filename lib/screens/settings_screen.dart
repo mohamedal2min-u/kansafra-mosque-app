@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
+import '../services/adhan_catalog.dart';
 import '../services/adhan_service.dart';
 import '../settings.dart';
 
@@ -18,12 +19,19 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
   AudioPlayer? _player; // يُنشأ عند أول استماع فقط
   String? _playingId;
   String _query = '';
+  String? _downloadingId; // مؤذن إضافي قيد التحميل
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadPerm();
+    AdhanCatalog.restore().then((_) {
+      if (mounted) setState(() {});
+      return AdhanCatalog.refresh();
+    }).then((_) {
+      if (mounted) setState(() {});
+    });
     () async {
       final c = await AppSettings.adhanChoice();
       final e = await AppSettings.adhanEnabled();
@@ -50,6 +58,19 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
   }
 
   Future<void> _pick(AdhanChoice c) async {
+    final v = c.voice;
+    // المؤذن الإضافي يُحمَّل مرة واحدة عند أول اختيار له (وللطول الآخر عند تبديله).
+    if (v != null && v.isRemote && !await AdhanCatalog.isDownloaded(v, c.long)) {
+      setState(() => _downloadingId = v.id);
+      final ok = await AdhanCatalog.download(v, c.long);
+      if (!mounted) return;
+      setState(() => _downloadingId = null);
+      if (!ok) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('تعذّر تحميل الصوت. تأكد من الاتصال بالإنترنت، وأن الهاتف أندرويد 10 أو أحدث.')));
+        return;
+      }
+    }
     setState(() => _choice = c);
     await AppSettings.setAdhanChoice(c);
     await AdhanService.instance.scheduleAll(force: true);
@@ -65,7 +86,11 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
     setState(() => _playingId = id);
     try {
       final player = _player ??= AudioPlayer();
-      await player.setAsset(v.asset(_choice.long));
+      if (v.isRemote) {
+        await player.setUrl(v.url(_choice.long)!);
+      } else {
+        await player.setAsset(v.asset(_choice.long));
+      }
       await player.play();
     } catch (_) {}
     if (mounted) setState(() => _playingId = null);
@@ -76,8 +101,9 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
     final selected = _choice.voice?.id ?? 'default';
     final perm = _perm;
     final q = _query.trim();
+    final allVoices = [...adhanVoices, ...remoteVoices];
     final voices = [
-      for (final v in adhanVoices)
+      for (final v in allVoices)
         if (q.isEmpty || v.name.contains(q) || v.id == selected) v,
     ];
     return ListView(children: [
@@ -140,7 +166,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
         padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
         child: Text('المؤذن'),
       ),
-      if (adhanVoices.length > 8)
+      if (allVoices.length > 8)
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
           child: TextField(
@@ -157,7 +183,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
         groupValue: selected,
         onChanged: (id) {
           if (id == null) return;
-          final v = adhanVoices.where((e) => e.id == id).firstOrNull;
+          final v = allVoices.where((e) => e.id == id).firstOrNull;
           _pick(AdhanChoice(v, _choice.long));
         },
         child: Column(children: [
@@ -165,11 +191,14 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
             RadioListTile<String>(
               title: Text(v.name),
               value: v.id,
-              secondary: IconButton(
-                icon: Icon(_playingId == '${v.id}_${_choice.long}' ? Icons.stop_circle : Icons.play_circle),
-                tooltip: 'استماع',
-                onPressed: () => _preview(v),
-              ),
+              subtitle: v.isRemote ? const Text('يُحمَّل عند اختياره') : null,
+              secondary: _downloadingId == v.id
+                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                  : IconButton(
+                      icon: Icon(_playingId == '${v.id}_${_choice.long}' ? Icons.stop_circle : Icons.play_circle),
+                      tooltip: 'استماع',
+                      onPressed: () => _preview(v),
+                    ),
             ),
           const RadioListTile<String>(title: Text('صوت الإشعار العادي'), value: 'default'),
         ]),
@@ -177,7 +206,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
       ExpansionTile(
         title: const Text('مصادر تسجيلات الأذان'),
         children: [
-          for (final v in adhanVoices)
+          for (final v in allVoices)
             ListTile(dense: true, title: Text(v.name), subtitle: Text(v.credit)),
         ],
       ),

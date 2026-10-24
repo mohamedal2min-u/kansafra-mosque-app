@@ -9,6 +9,10 @@ class MosqueConfig {
   static const donorsUrl =
       'https://script.google.com/macros/s/AKfycbyCZUIZbzX263x3MBMpB4AAc8-p7ZBTaWf_AZineSAZuR543p60bD35SLRwnTgR08Gimw/exec';
 
+  /// رابط ملف JSON بقائمة أذان إضافية تُحمَّل عند الطلب دون زيادة حجم التطبيق (انظر tools/ADHAN_CATALOG.md).
+  /// فارغ = الميزة مخفية ويبقى المؤذنون المضمّنون فقط.
+  static const adhanCatalogUrl = '';
+
   /// Web client ID من Google Cloud Console لتفعيل «الدخول بحساب Google» (اختياري). فارغ = الدخول مخفي.
   /// يجب أن يكون هو نفسه WEB_CLIENT_ID في tools/donors_apps_script.gs.
   static const googleWebClientId = '';

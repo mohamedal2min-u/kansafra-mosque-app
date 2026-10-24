@@ -1,5 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'services/adhan_catalog.dart';
+
 /// مؤذن مضمّن في التطبيق. لإضافة مؤذن: ضع الملفين adhan_<raw>_long.mp3 و adhan_<raw>_short.mp3
 /// في assets/adhan/ وفي android/app/src/main/res/raw/ ثم أضف سطرًا هنا.
 class AdhanVoice {
@@ -7,7 +9,12 @@ class AdhanVoice {
   final String raw; // أحرف إنجليزية صغيرة وأرقام فقط
   final String name;
   final String credit; // الترخيص والمؤلف (ملف assets/adhan/CREDITS.md)
-  const AdhanVoice(this.id, this.raw, this.name, this.credit);
+  final String? longUrl; // للمؤذنين الإضافيين الذين يُحمَّلون عند الطلب
+  final String? shortUrl;
+  const AdhanVoice(this.id, this.raw, this.name, this.credit, {this.longUrl, this.shortUrl});
+
+  bool get isRemote => longUrl != null;
+  String? url(bool long) => long ? longUrl : shortUrl;
 
   String rawName(bool long) => 'adhan_${raw}_${long ? 'long' : 'short'}';
   String asset(bool long) => 'assets/adhan/${rawName(long)}.mp3';
@@ -24,6 +31,9 @@ const adhanVoices = <AdhanVoice>[
   AdhanVoice('voice8', 'v8', 'فاروق حضراوي', 'archive.org - الرخصة غير محددة'),
 ];
 
+/// مؤذنون إضافيون من القائمة المحمَّلة (انظر [AdhanCatalog]). فارغة حتى تُجلب القائمة.
+final remoteVoices = <AdhanVoice>[];
+
 /// اختيار المستخدم لصوت التنبيه. [voice] فارغ يعني صوت الإشعار العادي.
 class AdhanChoice {
   final AdhanVoice? voice;
@@ -32,7 +42,7 @@ class AdhanChoice {
 
   String get id => voice == null ? 'default' : '${voice!.id}_${long ? 'long' : 'short'}';
   String get label => voice == null ? 'صوت الإشعار العادي' : '${voice!.name} (${long ? 'كامل' : 'قصير'})';
-  String? get rawName => voice?.rawName(long);
+  String? get rawName => voice == null || voice!.isRemote ? null : voice!.rawName(long);
 }
 
 class AppSettings {
@@ -43,7 +53,8 @@ class AppSettings {
   static Future<AdhanChoice> adhanChoice() async {
     final p = await SharedPreferences.getInstance();
     final id = p.getString(_kVoice) ?? adhanVoices.first.id;
-    final voice = adhanVoices.where((v) => v.id == id).firstOrNull;
+    await AdhanCatalog.restore();
+    final voice = [...adhanVoices, ...remoteVoices].where((v) => v.id == id).firstOrNull;
     return AdhanChoice(voice, p.getBool(_kLong) ?? false);
   }
 

@@ -6,6 +6,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../config.dart';
 import '../settings.dart';
+import 'adhan_catalog.dart';
 import 'prayer_calc.dart';
 
 /// جدولة تنبيه الأذان لخمس صلوات على مدى 7 أيام، وتُعاد الجدولة عند كل فتح للتطبيق.
@@ -67,8 +68,10 @@ class AdhanService {
   Future<void> scheduleAll({bool force = false}) async {
     final enabled = await AppSettings.adhanEnabled();
     final sound = await AppSettings.adhanChoice();
+    // مؤذن إضافي حُمّل مسبقًا: يُشغَّل من مخزن الأصوات، وإلا يُستخدم صوت الإشعار العادي.
+    final remoteUri = await AdhanCatalog.uriFor(sound);
     final now0 = DateTime.now();
-    final signature = '${now0.year}-${now0.month}-${now0.day}|$enabled|${sound.id}|'
+    final signature = '${now0.year}-${now0.month}-${now0.day}|$enabled|${sound.id}|$remoteUri|'
         '${MosqueConfig.latitude},${MosqueConfig.longitude}|${MosqueConfig.minuteAdjustments}';
     final prefs = await SharedPreferences.getInstance();
     if (!force && prefs.getString('sched_sig') == signature) return;
@@ -100,7 +103,7 @@ class AdhanService {
           NotificationDetails(
             android: AndroidNotificationDetails(
               // صوت القناة لا يتغير بعد إنشائها، فلكل صوت قناة مستقلة.
-              'adhan_${sound.id}',
+              'adhan_${sound.id}_${remoteUri?.hashCode ?? 0}',
               'الأذان (${sound.label})',
               channelDescription: 'تنبيهات أوقات الصلاة',
               importance: Importance.max,
@@ -110,9 +113,11 @@ class AdhanService {
               audioAttributesUsage: AudioAttributesUsage.alarm,
               visibility: NotificationVisibility.public,
               enableVibration: true,
-              sound: sound.rawName == null
-                  ? null
-                  : RawResourceAndroidNotificationSound(sound.rawName),
+              sound: sound.rawName != null
+                  ? RawResourceAndroidNotificationSound(sound.rawName)
+                  : remoteUri != null
+                      ? UriAndroidNotificationSound(remoteUri)
+                      : null,
             ),
             iOS: const DarwinNotificationDetails(presentSound: true),
           ),
