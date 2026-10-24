@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
+import 'audio_store.dart';
 import 'quran_data.dart';
 import 'reciters.dart';
 
@@ -11,6 +14,11 @@ class QuranPlayer extends ChangeNotifier {
     _audio.playerStateStream.listen((s) {
       if (s.processingState == ProcessingState.completed) next();
       notifyListeners();
+    });
+    // نقيس مدة الاستماع لكل قارئ (كل 10 ثوانٍ أثناء التشغيل).
+    Timer.periodic(const Duration(seconds: 10), (_) {
+      final r = reciter;
+      if (r != null && _audio.playing) AudioStore.addListen(r.id, 10);
     });
   }
   static final instance = QuranPlayer._();
@@ -33,10 +41,23 @@ class QuranPlayer extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await _audio.setAudioSource(AudioSource.uri(
-        Uri.parse(m.urlFor(s)),
-        tag: MediaItem(id: m.urlFor(s), title: 'سورة ${QuranData.name(s)}', artist: r.name, album: 'القرآن الكريم'),
-      ));
+      final tag = MediaItem(id: m.urlFor(s), title: 'سورة ${QuranData.name(s)}', artist: r.name, album: 'القرآن الكريم');
+      AudioSource source;
+      if (AudioStore.supported) {
+        final f = await AudioStore.file(r, m, s);
+        if (await f.exists()) {
+          // محفوظة على الهاتف: تعمل بدون إنترنت.
+          source = AudioSource.file(f.path, tag: tag);
+        } else if (await AudioStore.isRegular(r.id)) {
+          // قارئ معتاد (أكثر من ساعة استماع): تُحفظ السورة أثناء الاستماع.
+          source = LockCachingAudioSource(Uri.parse(m.urlFor(s)), cacheFile: f, tag: tag);
+        } else {
+          source = AudioSource.uri(Uri.parse(m.urlFor(s)), tag: tag);
+        }
+      } else {
+        source = AudioSource.uri(Uri.parse(m.urlFor(s)), tag: tag);
+      }
+      await _audio.setAudioSource(source);
       await _audio.play();
     } catch (e) {
       error = 'تعذّر التشغيل. تحقّق من الإنترنت.';

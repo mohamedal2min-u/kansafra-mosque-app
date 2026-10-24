@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
+import '../quran/audio_store.dart';
 import '../services/adhan_service.dart';
 import '../settings.dart';
 
@@ -178,6 +179,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
           const RadioListTile<String>(title: Text('صوت الإشعار العادي'), value: 'default'),
         ]),
       ),
+      if (AudioStore.supported) const _SavedAudioTile(),
       ExpansionTile(
         title: const Text('مصادر تسجيلات الأذان'),
         children: [
@@ -186,5 +188,40 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
         ],
       ),
     ]);
+  }
+}
+
+/// حجم التلاوات المحفوظة على الهاتف مع زر حذفها.
+class _SavedAudioTile extends StatefulWidget {
+  const _SavedAudioTile();
+
+  @override
+  State<_SavedAudioTile> createState() => _SavedAudioTileState();
+}
+
+class _SavedAudioTileState extends State<_SavedAudioTile> {
+  late Future<int> _size = AudioStore.totalBytes();
+
+  String _fmt(int b) => b < 1024 * 1024 ? '${(b / 1024).round()} ك.ب' : '${(b / 1024 / 1024).toStringAsFixed(1)} م.ب';
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<int>(
+      future: _size,
+      builder: (context, snap) => ListTile(
+        leading: const Icon(Icons.download_done_rounded),
+        title: const Text('تلاوات محفوظة على الهاتف'),
+        subtitle: Text(snap.hasData ? _fmt(snap.data!) : '...'),
+        trailing: TextButton(
+          onPressed: (snap.data ?? 0) == 0
+              ? null
+              : () async {
+                  await AudioStore.clearAll();
+                  if (mounted) setState(() => _size = AudioStore.totalBytes());
+                },
+          child: const Text('حذف'),
+        ),
+      ),
+    );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'quran_data.dart';
 
+import 'audio_store.dart';
 import 'player.dart';
 import 'reader_screen.dart';
 import 'reciters.dart';
@@ -63,7 +64,12 @@ class _ListenScreenState extends State<ListenScreen> {
         if (snap.hasError) {
           return Center(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Text('الاستماع يحتاج إنترنت.\nالقراءة تعمل بدون إنترنت.', textAlign: TextAlign.center),
+              const Text('تعذّر تحميل قائمة القرّاء.\nالقراءة تعمل بدون إنترنت.', textAlign: TextAlign.center),
+              if (ReciterApi.lastError != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                  child: SelectableText(ReciterApi.lastError!, textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 11)),
+                ),
               const SizedBox(height: 12),
               FilledButton(
                 onPressed: () => setState(() => _future = ReciterApi.load()),
@@ -129,7 +135,19 @@ class _ListenScreenState extends State<ListenScreen> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
+            child: list.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        _onlyFav
+                            ? 'لا توجد مفضلة بعد.\nاضغط النجمة ⭐ بجانب أي قارئ لإضافته.'
+                            : 'لا توجد نتائج.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
+                : ListView.builder(
               itemCount: list.length,
               itemBuilder: (context, i) => ListTile(
                 title: Text(list[i].name),
@@ -162,6 +180,8 @@ class ReciterScreen extends StatefulWidget {
 
 class _ReciterScreenState extends State<ReciterScreen> {
   late Moshaf _moshaf = widget.reciter.moshafs.first;
+  Set<int> _saved = {};
+  int _listenSecs = 0;
 
   @override
   void initState() {
@@ -170,7 +190,16 @@ class _ReciterScreenState extends State<ReciterScreen> {
       final saved = p.getString('$kLastMoshaf:${widget.reciter.id}');
       final m = widget.reciter.moshafs.where((e) => e.name == saved).firstOrNull;
       if (m != null && mounted) setState(() => _moshaf = m);
+      _refreshSaved();
     });
+    AudioStore.listenSeconds(widget.reciter.id).then((v) {
+      if (mounted) setState(() => _listenSecs = v);
+    });
+  }
+
+  Future<void> _refreshSaved() async {
+    final s = await AudioStore.savedSurahs(widget.reciter, _moshaf);
+    if (mounted) setState(() => _saved = s);
   }
 
   Future<void> _saveMoshaf(Moshaf m) async =>
@@ -192,7 +221,18 @@ class _ReciterScreenState extends State<ReciterScreen> {
                 for (final m in widget.reciter.moshafs)
                   DropdownMenuItem(value: m, child: Text(m.name, overflow: TextOverflow.ellipsis)),
               ],
-              onChanged: (m) { setState(() => _moshaf = m!); _saveMoshaf(m!); },
+              onChanged: (m) { setState(() => _moshaf = m!); _saveMoshaf(m!); _refreshSaved(); },
+            ),
+          ),
+        if (AudioStore.supported)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              _listenSecs >= kRegularListenSeconds
+                  ? 'قارئ معتاد عندك: يُحفظ ما تسمعه له على الهاتف للاستماع بدون إنترنت.'
+                  : 'استمعتَ لهذا القارئ ${_listenSecs ~/ 60} دقيقة. بعد ساعة يُحفظ ما تسمعه له على الهاتف.',
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
             ),
           ),
         Expanded(
@@ -206,7 +246,12 @@ class _ReciterScreenState extends State<ReciterScreen> {
                 return ListTile(
                   leading: CircleAvatar(child: Text('$s')),
                   title: Text(QuranData.name(s)),
-                  trailing: Icon(current && player.playing ? Icons.pause_circle : Icons.play_circle, size: 40),
+                  subtitle: _saved.contains(s) ? const Text('محفوظة على الهاتف (تعمل بدون إنترنت)') : null,
+                  trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                    if (_saved.contains(s)) Icon(Icons.download_done_rounded, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 6),
+                    Icon(current && player.playing ? Icons.pause_circle : Icons.play_circle, size: 40),
+                  ]),
                   selected: current,
                   onTap: () async {
                     if (!current) await player.play(widget.reciter, _moshaf, s);
@@ -239,8 +284,10 @@ class PlayerBar extends StatelessWidget {
         if (p.surah == null) return const SizedBox.shrink();
         return Material(
           elevation: 8,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Text('${QuranData.name(p.surah!)} - ${p.reciter!.name}',
                   overflow: TextOverflow.ellipsis),
@@ -267,6 +314,7 @@ class PlayerBar extends StatelessWidget {
                 IconButton(iconSize: 38, icon: const Icon(Icons.skip_previous), onPressed: p.previous),
               ]),
             ]),
+          ),
           ),
         );
       },
