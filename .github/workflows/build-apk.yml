@@ -29,9 +29,9 @@ jobs:
           if [ -n "$KS_B64" ]; then
             echo "$KS_B64" | base64 -d > android/app/release.jks
             printf 'storeFile=release.jks\nstorePassword=%s\nkeyPassword=%s\nkeyAlias=kansafra\n' "$KS_PASS" "$KS_PASS" > android/key.properties
-            echo "Signing with the release key"
+            echo "::notice::SIGNING=release-key"
           else
-            echo "No release key: debug signing"
+            echo "::notice::SIGNING=debug-key (secrets missing)"
           fi
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos

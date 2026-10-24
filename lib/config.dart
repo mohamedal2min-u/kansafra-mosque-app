@@ -11,7 +11,8 @@ class MosqueConfig {
 
   /// Web client ID من Google Cloud Console لتفعيل «الدخول بحساب Google» (اختياري). فارغ = الدخول مخفي.
   /// يجب أن يكون هو نفسه WEB_CLIENT_ID في tools/donors_apps_script.gs.
-  static const googleWebClientId = '';
+  static const googleWebClientId =
+      '843002779261-9mp73ui95d4f2h3hha9399m05bg3d611.apps.googleusercontent.com';
 
   /// المنطقة الزمنية لجدولة التنبيهات.
   static const timeZone = 'Asia/Damascus';
