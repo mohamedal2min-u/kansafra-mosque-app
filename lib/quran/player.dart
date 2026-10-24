@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 
+import 'quran_data.dart';
 import 'reciters.dart';
 
 /// مشغّل واحد للتطبيق: يشغّل سورة ثم ينتقل للتالية تلقائيًا.
@@ -31,7 +33,10 @@ class QuranPlayer extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await _audio.setUrl(m.urlFor(s));
+      await _audio.setAudioSource(AudioSource.uri(
+        Uri.parse(m.urlFor(s)),
+        tag: MediaItem(id: m.urlFor(s), title: 'سورة ${QuranData.name(s)}', artist: r.name, album: 'القرآن الكريم'),
+      ));
       await _audio.play();
     } catch (e) {
       error = 'تعذّر التشغيل. تحقّق من الإنترنت.';

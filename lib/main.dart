@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'account/account_screen.dart';
@@ -20,6 +21,14 @@ Future<void> main() async {
   if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
     // بعد أول إطار حتى لا يؤخّر طلب الأذونات فتح التطبيق.
     WidgetsBinding.instance.addPostFrameCallback((_) => AdhanService.instance.init());
+  }
+  // تشغيل القرآن في الخلفية بخدمة مقدّمة (إشعار تحكم) حتى لا يوقفه النظام.
+  if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+    await JustAudioBackground.init(
+      androidNotificationChannelId: 'org.kansafra.kansafra_mosque.audio',
+      androidNotificationChannelName: 'تشغيل القرآن',
+      androidNotificationOngoing: true,
+    );
   }
   await ThemeController.load();
   Identity.instance.restore();
@@ -115,6 +124,7 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   // 0 الأذان، 1 القرآن، 2 التبرعات (الزر الأوسط البارز)، 3 الدعم، 4 الإعدادات
   int _index = 0;
+  final _visited = <int>{0};
   static const _pages = [PrayerTimesScreen(), QuranHome(), DonationsScreen(), SupportScreen(), SettingsScreen()];
   static const _donate = 2;
 
@@ -124,7 +134,7 @@ class _HomeShellState extends State<HomeShell> {
     final color = selected ? scheme.primary : scheme.onSurfaceVariant;
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _index = i),
+        onTap: () => setState(() { _index = i; _visited.add(i); }),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -168,7 +178,14 @@ class _HomeShellState extends State<HomeShell> {
       ),
       body: Column(children: [
         const MiniPlayer(),
-        Expanded(child: _pages[_index]),
+        Expanded(
+          child: IndexedStack(
+            index: _index,
+            children: [
+              for (var i = 0; i < _pages.length; i++) _visited.contains(i) ? _pages[i] : const SizedBox.shrink(),
+            ],
+          ),
+        ),
       ]),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: SizedBox(
@@ -181,7 +198,7 @@ class _HomeShellState extends State<HomeShell> {
           backgroundColor: scheme.tertiary,
           foregroundColor: Colors.white,
           tooltip: 'التبرعات',
-          onPressed: () => setState(() => _index = _donate),
+          onPressed: () => setState(() { _index = _donate; _visited.add(_donate); }),
           child: const Icon(Icons.volunteer_activism_rounded, size: 34),
         ),
       ),
@@ -190,7 +207,10 @@ class _HomeShellState extends State<HomeShell> {
         notchMargin: 8,
         padding: EdgeInsets.zero,
         height: 64,
-        child: Row(children: [
+        // الترتيب من اليسار إلى اليمين: الأذان أولًا ثم القرآن ثم التبرعات ثم الدعم ثم الإعدادات.
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: Row(children: [
           _item(0, Icons.access_time_filled_rounded, 'الأذان'),
           _item(1, Icons.menu_book_rounded, 'القرآن'),
           // مكان الزر الأوسط
@@ -207,7 +227,8 @@ class _HomeShellState extends State<HomeShell> {
           ),
           _item(3, Icons.support_agent_rounded, 'الدعم'),
           _item(4, Icons.settings_rounded, 'الإعدادات'),
-        ]),
+          ]),
+        ),
       ),
     );
   }

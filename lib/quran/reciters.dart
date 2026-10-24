@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show compute;
 import 'package:http/http.dart' as http;
 
 /// تصنيفات التلاوات.
@@ -34,7 +35,9 @@ class Reciter {
   static const _makkah = ['السديس', 'الشريم', 'المعيقلي', 'بليلة', 'الجهني'];
   static const _madinah = ['الحذيفي', 'البدير', 'القاسم', 'الخياط', 'آل الشيخ'];
 
-  Set<ReciterTag> get tags {
+  late final Set<ReciterTag> tags = _computeTags();
+
+  Set<ReciterTag> _computeTags() {
     final all = moshafs.map((m) => m.name).join(' ');
     return {
       if (_makkah.any(name.contains)) ReciterTag.makkah,
@@ -48,6 +51,8 @@ class Reciter {
 }
 
 /// يجلب القرّاء من واجهة mp3quran.net (يحتاج إنترنت؛ القراءة النصية لا تحتاجه).
+Map<String, dynamic> _decode(List<int> bytes) => jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+
 class ReciterApi {
   static String base = 'https://mp3quran.net/api/v3';
   static List<Reciter>? _cache;
@@ -57,7 +62,7 @@ class ReciterApi {
     final res = await http.get(Uri.parse('$base/reciters?language=ar'))
         .timeout(const Duration(seconds: 20));
     if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
-    final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    final data = await compute(_decode, res.bodyBytes);
     _cache = [
       for (final r in data['reciters'] as List)
         Reciter(
