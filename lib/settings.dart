@@ -18,6 +18,10 @@ const adhanVoices = <AdhanVoice>[
   AdhanVoice('voice2', 'v2', 'أذان مختصر', 'ملكية عامة'),
   AdhanVoice('voice3', 'v3', 'عاقب عزيز', 'Atcovi - CC BY-SA 4.0'),
   AdhanVoice('voice4', 'v4', 'الحرم المكي (2013)', 'Seyfula Islam - CC BY 3.0'),
+  AdhanVoice('voice5', 'v5', 'علي ملا (الحرم المكي)', 'archive.org - الرخصة غير محددة'),
+  AdhanVoice('voice6', 'v6', 'مشاري العفاسي', 'archive.org - الرخصة غير محددة'),
+  AdhanVoice('voice7', 'v7', 'ناصر القطامي', 'archive.org - الرخصة غير محددة'),
+  AdhanVoice('voice8', 'v8', 'فاروق حضراوي', 'archive.org - الرخصة غير محددة'),
 ];
 
 /// اختيار المستخدم لصوت التنبيه. [voice] فارغ يعني صوت الإشعار العادي.
