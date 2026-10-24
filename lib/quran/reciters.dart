@@ -31,8 +31,27 @@ class Reciter {
   final List<Moshaf> moshafs;
   Reciter(this.id, this.name, this.moshafs);
 
-  static const _makkah = ['السديس', 'الشريم', 'المعيقلي', 'بليلة', 'الجهني'];
-  static const _madinah = ['الحذيفي', 'البدير', 'القاسم', 'الخياط', 'آل الشيخ'];
+  // أجزاء من أسماء الأئمة كما تظهر في mp3quran.net (مطابقة بالاحتواء).
+  static const _makkah = [
+    'السديس',
+    'الشريم',
+    'المعيقلي',
+    'بليلة',
+    'الجهني',
+    'بن حميد',
+    'غزاوي',
+    'الغامدي خالد',
+  ];
+  static const _madinah = [
+    'الحذيفي',
+    'البدير',
+    'القاسم',
+    'الخياط',
+    'آل الشيخ',
+    'الثبيتي',
+    'محمد أيوب',
+    'عبدالمحسن الأحمد',
+  ];
 
   Set<ReciterTag> get tags {
     final all = moshafs.map((m) => m.name).join(' ');
