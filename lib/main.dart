@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'account/account_screen.dart';
+import 'account/identity.dart';
 import 'config.dart';
 import 'services/adhan_service.dart';
 import 'quran/quran_home.dart';
@@ -16,6 +18,7 @@ Future<void> main() async {
   if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
     await AdhanService.instance.init();
   }
+  Identity.instance.restore();
   runApp(const MosqueApp());
 }
 
@@ -57,7 +60,16 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text(MosqueConfig.name)),
+      appBar: AppBar(
+        title: const Text(MosqueConfig.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.account_circle),
+            tooltip: 'حسابي',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccountScreen())),
+          ),
+        ],
+      ),
       body: _pages[_index],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,

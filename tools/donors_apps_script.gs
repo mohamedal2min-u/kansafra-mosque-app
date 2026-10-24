@@ -1,42 +1,103 @@
 // الصق هذا الكود في Apps Script المرتبط بجدول Google Sheets (انظر tools/DONORS_SETUP.md).
-// الصف الأول عناوين: التاريخ | الاسم | المبلغ. لحذف اسم غير مرغوب احذف صفه من الجدول.
+// الورقة الأولى: التاريخ | الاسم | المبلغ | المالك   (لحذف اسم غير مرغوب احذف صفه)
+// ورقة «الدعم»: التاريخ | الاسم | الهاتف | النوع | الرسالة | المالك | الرد | تاريخ الرد
+// للرد على رسالة: اكتب الرد في عمود «الرد» أمام الرسالة، فيراه صاحبها في التطبيق.
 const MAX_ROWS = 200;
+// اتركه فارغًا إن لم تفعّل دخول Google. وإلا ضع Web client ID من Google Cloud Console.
+const WEB_CLIENT_ID = '';
+
+const DONOR_HEADERS = ['التاريخ', 'الاسم', 'المبلغ', 'المالك'];
+const SUPPORT_HEADERS = ['التاريخ', 'الاسم', 'الهاتف', 'النوع', 'الرسالة', 'المالك', 'الرد', 'تاريخ الرد'];
 
 function doGet(e) {
   const p = e.parameter || {};
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheets()[0];
+  const owner = ownerOf(p);
+  if (owner === null) return json({ error: 'auth' });
+
   if (p.action === 'support') {
-    const lock = LockService.getScriptLock();
-    lock.waitLock(10000);
-    try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      let sup = ss.getSheetByName('الدعم');
-      if (!sup) {
-        sup = ss.insertSheet('الدعم');
-        sup.appendRow(['التاريخ', 'الاسم', 'الهاتف', 'النوع', 'الرسالة']);
-      }
-      sup.appendRow([new Date(), clean(p.name, 40), clean(p.phone, 20), clean(p.type, 20), clean(p.message, 500)]);
-    } finally {
-      lock.releaseLock();
-    }
-    return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+    return withLock(function () {
+      const sup = supportSheet(ss);
+      sup.appendRow([new Date(), clean(p.name, 40), clean(p.phone, 20), clean(p.type, 20), clean(p.message, 500), owner, '', '']);
+      return json({ ok: true });
+    });
   }
+
+  if (p.action === 'mine') {
+    if (!owner) return json({ donations: [], messages: [] });
+    const sup = supportSheet(ss);
+    return json({
+      donations: rowsOf(sheet, 4).filter(function (r) { return r[3] === owner; }).map(function (r) {
+        return { date: iso(r[0]), name: String(r[1]), amount: String(r[2]) };
+      }).reverse(),
+      messages: rowsOf(sup, 8).filter(function (r) { return r[5] === owner; }).map(function (r) {
+        return { date: iso(r[0]), type: String(r[3]), message: String(r[4]), reply: String(r[6] || ''), replyDate: r[7] ? iso(r[7]) : '' };
+      }).reverse(),
+    });
+  }
+
   if (p.action === 'add') {
-    const lock = LockService.getScriptLock();
-    lock.waitLock(10000);
-    try {
-      sheet.appendRow([new Date(), clean(p.name, 40) || 'فاعل خير', clean(p.amount, 20)]);
-    } finally {
-      lock.releaseLock();
-    }
+    withLock(function () {
+      ensureHeaders(sheet, DONOR_HEADERS);
+      sheet.appendRow([new Date(), clean(p.name, 40) || 'فاعل خير', clean(p.amount, 20), owner]);
+    });
   }
+
   const last = sheet.getLastRow();
   const n = Math.min(Math.max(last - 1, 0), MAX_ROWS);
   const rows = n === 0 ? [] : sheet.getRange(last - n + 1, 1, n, 3).getValues();
-  const out = rows.reverse().map(function (r) {
-    return { date: new Date(r[0]).toISOString(), name: String(r[1]), amount: String(r[2]) };
-  });
-  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+  return json(rows.reverse().map(function (r) {
+    return { date: iso(r[0]), name: String(r[1]), amount: String(r[2]) };
+  }));
+}
+
+// المالك: حساب Google موثّق (g:) أو معرّف الجهاز (d:) أو فارغ. null = رمز دخول غير صالح.
+function ownerOf(p) {
+  if (p.idToken) {
+    const sub = verifyToken(p.idToken);
+    return sub ? 'g:' + sub : null;
+  }
+  if (p.device && /^[a-f0-9]{32}$/.test(p.device)) return 'd:' + p.device;
+  return '';
+}
+
+function verifyToken(t) {
+  if (!WEB_CLIENT_ID) return null;
+  const r = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(t), { muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) return null;
+  const j = JSON.parse(r.getContentText());
+  return j.aud === WEB_CLIENT_ID ? j.sub : null;
+}
+
+function supportSheet(ss) {
+  let sup = ss.getSheetByName('الدعم');
+  if (!sup) sup = ss.insertSheet('الدعم');
+  ensureHeaders(sup, SUPPORT_HEADERS);
+  return sup;
+}
+
+function ensureHeaders(sheet, headers) {
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+}
+
+function rowsOf(sheet, cols) {
+  const last = sheet.getLastRow();
+  if (last < 2) return [];
+  const n = Math.min(last - 1, 2000);
+  return sheet.getRange(last - n + 1, 1, n, cols).getValues();
+}
+
+function withLock(fn) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try { return fn(); } finally { lock.releaseLock(); }
+}
+
+function iso(d) { return new Date(d).toISOString(); }
+
+function json(o) {
+  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
 
 // يمنع تحويل النص إلى صيغة جدول (=، +، -، @) ويقصّ الطول.

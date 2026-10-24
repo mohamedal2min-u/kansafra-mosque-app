@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../account/identity.dart';
 import '../config.dart';
 
 /// صفحة المساعدة والدعم: تعريف سريع ونموذج يصل إلى ورقة «الدعم» في جدول Google.
@@ -39,6 +40,7 @@ class _SupportScreenState extends State<SupportScreen> {
         'phone': _phone.text.trim(),
         'type': _type,
         'message': _message.text.trim(),
+        ...await Identity.instance.params(),
       });
       final res = await http.get(uri).timeout(const Duration(seconds: 20));
       // النسخة القديمة من السكربت لا تعرف «support» وترجع قائمة المتبرعين دون حفظ الرسالة.
@@ -108,7 +110,7 @@ class _SupportScreenState extends State<SupportScreen> {
         if (_sent)
           const Padding(
             padding: EdgeInsets.only(top: 8),
-            child: Text('وصلت رسالتك، جزاك الله خيرًا.'),
+            child: Text('وصلت رسالتك، جزاك الله خيرًا. تجد الرد في «حسابي» (الأيقونة أعلى الشاشة).'),
           ),
         const SizedBox(height: 12),
         FilledButton(onPressed: canSend ? _send : null, child: const Text('إرسال')),

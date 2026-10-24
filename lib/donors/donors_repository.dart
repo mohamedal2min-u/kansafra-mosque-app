@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../account/identity.dart';
 import '../config.dart';
 
 /// متبرع في القائمة. إن كان [name] فارغًا يُعرض «فاعل خير».
@@ -85,6 +86,7 @@ class SheetsDonorsRepository implements DonorsRepository {
       'action': 'add',
       'name': name ?? '',
       'amount': amount ?? '',
+      ...await Identity.instance.params(),
     });
     final res = await http.get(uri).timeout(const Duration(seconds: 20));
     if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
