@@ -24,8 +24,11 @@ jobs:
       - name: Prepare signing key (if secrets are set)
         env:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_P1: ${{ secrets.ANDROID_KEYSTORE_PART1 }}
+          KS_P2: ${{ secrets.ANDROID_KEYSTORE_PART2 }}
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
+          if [ -n "$KS_P1" ] && [ -n "$KS_P2" ]; then KS_B64="$KS_P1$KS_P2"; fi
           if [ -z "$KS_B64" ]; then
             echo "::notice::SIGNING=debug-key (secret ANDROID_KEYSTORE_BASE64 missing)"
             exit 0
@@ -33,7 +36,7 @@ jobs:
           printf '%s' "$KS_B64" | tr -d ' \n\r\t"' > ks.b64
           len=$(wc -c < ks.b64)
           if ! base64 -d ks.b64 > android/app/release.jks 2>/dev/null; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 is not valid base64 (length after cleanup: $len, expected 3560). Paste it again as ONE line."
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not valid base64 (length after cleanup: $len, expected 3560; part1 ${#KS_P1}, part2 ${#KS_P2}, expected 1780 each). Paste it again as ONE line."
             exit 1
           fi
           if ! keytool -list -keystore android/app/release.jks -storepass "$KS_PASS" >/dev/null 2>&1; then
