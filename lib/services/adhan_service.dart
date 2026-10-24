@@ -1,4 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
@@ -14,6 +15,35 @@ class AdhanService {
 
   static const _days = 7;
   final _plugin = FlutterLocalNotificationsPlugin();
+
+  /// حالة الأذونات المطلوبة لعمل الأذان والتطبيق مغلق (أندرويد فقط).
+  Future<AdhanPermissions> permissions() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return const AdhanPermissions(true, true);
+    return AdhanPermissions(
+      await android.areNotificationsEnabled() ?? true,
+      await android.canScheduleExactNotifications() ?? true,
+    );
+  }
+
+  /// يطلب إذن الإشعارات، وإن كان مرفوضًا نهائيًا يفتح إعدادات التطبيق في الهاتف.
+  Future<void> enableNotifications() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await android?.requestNotificationsPermission();
+    if (!(await permissions()).notifications) await openAppSettings();
+    await scheduleAll(force: true);
+  }
+
+  Future<void> enableExactAlarms() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await android?.requestExactAlarmsPermission();
+    await scheduleAll(force: true);
+  }
+
+  /// استثناء التطبيق من توفير البطارية حتى لا يوقف النظام التنبيهات في الخلفية.
+  Future<void> ignoreBatteryOptimizations() async {
+    await Permission.ignoreBatteryOptimizations.request();
+  }
 
   Future<void> init() async {
     tzdata.initializeTimeZones();
@@ -75,6 +105,11 @@ class AdhanService {
               channelDescription: 'تنبيهات أوقات الصلاة',
               importance: Importance.max,
               priority: Priority.high,
+              // يُعامَل كمنبّه: يُسمَع بصوت المنبّه ويعمل والهاتف في وضع السكون.
+              category: AndroidNotificationCategory.alarm,
+              audioAttributesUsage: AudioAttributesUsage.alarm,
+              visibility: NotificationVisibility.public,
+              enableVibration: true,
               sound: sound.rawName == null
                   ? null
                   : RawResourceAndroidNotificationSound(sound.rawName),
@@ -88,4 +123,11 @@ class AdhanService {
       }
     }
   }
+}
+
+class AdhanPermissions {
+  final bool notifications;
+  final bool exactAlarms;
+  const AdhanPermissions(this.notifications, this.exactAlarms);
+  bool get ok => notifications && exactAlarms;
 }

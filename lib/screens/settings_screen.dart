@@ -11,7 +11,8 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObserver {
+  AdhanPermissions? _perm;
   AdhanChoice _choice = AdhanChoice(adhanVoices.first, false);
   bool _enabled = true;
   AudioPlayer? _player; // يُنشأ عند أول استماع فقط
@@ -20,6 +21,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadPerm();
     () async {
       final c = await AppSettings.adhanChoice();
       final e = await AppSettings.adhanEnabled();
@@ -27,8 +30,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }();
   }
 
+  Future<void> _loadPerm() async {
+    final p = await AdhanService.instance.permissions();
+    if (mounted) setState(() => _perm = p);
+  }
+
+  // عند الرجوع من إعدادات الهاتف نحدّث الحالة.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _loadPerm();
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _player?.dispose();
     super.dispose();
   }
@@ -59,7 +74,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final selected = _choice.voice?.id ?? 'default';
+    final perm = _perm;
     return ListView(children: [
+      if (perm != null && !perm.ok)
+        Card(
+          color: Theme.of(context).colorScheme.errorContainer,
+          margin: const EdgeInsets.all(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('الأذان لن يعمل والتطبيق مغلق حتى تفعّل:',
+                  style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              if (!perm.notifications)
+                OutlinedButton.icon(
+                  onPressed: () async { await AdhanService.instance.enableNotifications(); _loadPerm(); },
+                  icon: const Icon(Icons.notifications_active),
+                  label: const Text('تفعيل الإشعارات'),
+                ),
+              if (!perm.exactAlarms)
+                OutlinedButton.icon(
+                  onPressed: () async { await AdhanService.instance.enableExactAlarms(); _loadPerm(); },
+                  icon: const Icon(Icons.alarm_on),
+                  label: const Text('السماح بالتنبيهات في وقتها الدقيق'),
+                ),
+            ]),
+          ),
+        ),
       SwitchListTile(
         title: const Text('تنبيه الأذان'),
         value: _enabled,
@@ -68,6 +109,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           await AppSettings.setAdhanEnabled(v);
           await AdhanService.instance.scheduleAll(force: true);
         },
+      ),
+      ListTile(
+        leading: const Icon(Icons.battery_saver),
+        title: const Text('استثناء التطبيق من توفير البطارية'),
+        subtitle: const Text('يمنع بعض الهواتف من إيقاف الأذان في الخلفية.'),
+        onTap: () => AdhanService.instance.ignoreBatteryOptimizations(),
       ),
       const Padding(
         padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
