@@ -6,7 +6,7 @@ const MAX_ROWS = 200;
 // اتركه فارغًا إن لم تفعّل دخول Google. وإلا ضع Web client ID من Google Cloud Console.
 const WEB_CLIENT_ID = '843002779261-9mp73ui95d4f2h3hha9399m05bg3d611.apps.googleusercontent.com';
 
-const DONOR_HEADERS = ['التاريخ', 'الاسم', 'المبلغ', 'المالك'];
+const DONOR_HEADERS = ['التاريخ', 'الاسم', 'المبلغ', 'المالك', 'المرجع'];
 const SUPPORT_HEADERS = ['التاريخ', 'الاسم', 'الهاتف', 'النوع', 'الرسالة', 'المالك', 'الرد', 'تاريخ الرد'];
 
 function doGet(e) {
@@ -136,4 +136,91 @@ function json(o) {
 function clean(s, max) {
   s = String(s || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, max);
   return /^[=+\-@]/.test(s) ? "'" + s : s;
+}
+
+
+// ====================== ربط شام كاش عبر shamcash-api.com ======================
+// خدمة طرف ثالث (غير رسمية من شام كاش). تقرأ التحويلات الواردة لمحفظة المسجد فقط (قراءة).
+// الإعداد: Project Settings ثم Script properties، أضف:
+//   SHAMCASH_TOKEN       = رمز API من لوحة shamcash-api.com (سرّي، لا يُرسل لأحد)
+//   SHAMCASH_ACCOUNT_ID  = معرّف الحساب (يظهر في نتيجة shamcashProbe)
+// ثم شغّل shamcashProbe مرة، وبعد تأكيد الحقول شغّل installSyncTrigger.
+
+const SHAMCASH_BASE = 'https://api.shamcash-api.com/v1';
+
+// أسماء حقول التحويل في ردّ /transactions. تُضبط بعد تشغيل shamcashProbe، ثم يُغيَّر CONFIRMED إلى true.
+const SHAM_FIELDS = {
+  CONFIRMED: false,
+  id: 'id',                    // معرّف التحويل (لمنع التكرار)
+  time: 'occurred_at',         // وقت التحويل (موثّق في الوثائق)
+  amount: 'amount',            // المبلغ
+  name: 'counterparty_name',   // اسم المحوِّل
+  isIncoming: function (t) { return true; }, // اجعلها تفحص نوع التحويل: وارد أم صادر
+};
+// كيف يظهر اسم المتبرع: 'full' الاسم كاملًا، 'first' الاسم الأول فقط، 'anonymous' فاعل خير دائمًا.
+const DISPLAY_NAME_MODE = 'first';
+
+function shamGet_(path, params) {
+  const token = PropertiesService.getScriptProperties().getProperty('SHAMCASH_TOKEN');
+  if (!token) throw new Error('SHAMCASH_TOKEN غير مضبوط');
+  const qs = Object.keys(params || {}).map(function (k) { return k + '=' + encodeURIComponent(params[k]); }).join('&');
+  const r = UrlFetchApp.fetch(SHAMCASH_BASE + path + (qs ? '?' + qs : ''), {
+    headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' },
+    muteHttpExceptions: true,
+  });
+  const payload = JSON.parse(r.getContentText());
+  if (payload.status !== 'success') throw new Error(payload.code + ': ' + payload.message);
+  return payload.data;
+}
+
+// يعرض بنية الحسابات وآخر 5 تحويلات في السجل (Execution log). احذف الأسماء والأرقام قبل مشاركة الناتج.
+function shamcashProbe() {
+  const accounts = shamGet_('/accounts');
+  Logger.log('ACCOUNTS: ' + JSON.stringify(accounts));
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('SHAMCASH_ACCOUNT_ID') || (accounts[0] && accounts[0].id);
+  const tx = shamGet_('/transactions', { account_id: id, limit: 5 });
+  Logger.log('TRANSACTIONS: ' + JSON.stringify(tx));
+}
+
+function displayName_(raw) {
+  const name = String(raw || '').trim();
+  if (!name || DISPLAY_NAME_MODE === 'anonymous') return 'فاعل خير';
+  if (DISPLAY_NAME_MODE === 'first') return name.split(/\s+/)[0];
+  return name;
+}
+
+// يضيف التحويلات الواردة الجديدة إلى قائمة المتبرعين (تُشغَّل كل 5 دقائق بمشغّل زمني).
+function syncShamCash() {
+  if (!SHAM_FIELDS.CONFIRMED) throw new Error('ثبّت أسماء الحقول في SHAM_FIELDS ثم اجعل CONFIRMED = true');
+  const props = PropertiesService.getScriptProperties();
+  const accountId = props.getProperty('SHAMCASH_ACCOUNT_ID');
+  const since = props.getProperty('SHAMCASH_LAST_SYNC') || iso(new Date(Date.now() - 24 * 3600 * 1000));
+  const tx = shamGet_('/transactions', { account_id: accountId, start_at: since, limit: 100 });
+  const list = (Array.isArray(tx) ? tx : (tx.transactions || [])).slice().sort(function (a, b) {
+    return new Date(a[SHAM_FIELDS.time]) - new Date(b[SHAM_FIELDS.time]);
+  });
+  withLock(function () {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+    ensureHeaders(sheet, DONOR_HEADERS);
+    const seen = {};
+    rowsOf(sheet, 5).forEach(function (r) { if (r[4]) seen[String(r[4])] = true; });
+    let latest = since;
+    list.forEach(function (t) {
+      if (!SHAM_FIELDS.isIncoming(t)) return;
+      const ref = 'sham:' + t[SHAM_FIELDS.id];
+      if (seen[ref]) return;
+      sheet.appendRow([new Date(t[SHAM_FIELDS.time]), displayName_(t[SHAM_FIELDS.name]), String(t[SHAM_FIELDS.amount]), '', ref]);
+      seen[ref] = true;
+      if (new Date(t[SHAM_FIELDS.time]) > new Date(latest)) latest = iso(t[SHAM_FIELDS.time]);
+    });
+    props.setProperty('SHAMCASH_LAST_SYNC', latest);
+  });
+}
+
+function installSyncTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'syncShamCash') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('syncShamCash').timeBased().everyMinutes(5).create();
 }
