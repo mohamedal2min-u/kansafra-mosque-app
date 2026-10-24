@@ -89,7 +89,6 @@ app.*.map.json
 **/windows/flutter/ephemeral
 
 # Web
-lib/generated_plugin_registrant.dart
 
 # Exceptions
 !**/ios/**/default.mode1v3

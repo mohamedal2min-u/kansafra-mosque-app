@@ -1,7 +1,7 @@
+import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../config.dart';
 import '../services/prayer_calc.dart';
 
 class PrayerTimesScreen extends StatelessWidget {
