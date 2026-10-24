@@ -27,13 +27,13 @@ class MiniPlayer extends StatelessWidget {
               child: Row(children: [
                 IconButton(
                   tooltip: 'إيقاف',
-                  icon: Icon(Icons.stop_circle_rounded, color: scheme.onPrimary, size: 30),
+                  icon: Icon(Icons.stop_circle_rounded, color: scheme.onPrimary, size: 40),
                   onPressed: p.stop,
                 ),
                 IconButton(
                   tooltip: p.playing ? 'إيقاف مؤقت' : 'تشغيل',
                   icon: Icon(p.playing ? Icons.pause_circle_rounded : Icons.play_circle_rounded,
-                      color: scheme.onPrimary, size: 34),
+                      color: scheme.onPrimary, size: 54),
                   onPressed: p.toggle,
                 ),
                 Expanded(
@@ -47,12 +47,12 @@ class MiniPlayer extends StatelessWidget {
                 ),
                 IconButton(
                   tooltip: 'السابقة',
-                  icon: Icon(Icons.skip_previous_rounded, color: scheme.onPrimary),
+                  icon: Icon(Icons.skip_previous_rounded, color: scheme.onPrimary, size: 34),
                   onPressed: p.previous,
                 ),
                 IconButton(
                   tooltip: 'التالية',
-                  icon: Icon(Icons.skip_next_rounded, color: scheme.onPrimary),
+                  icon: Icon(Icons.skip_next_rounded, color: scheme.onPrimary, size: 34),
                   onPressed: p.next,
                 ),
               ]),
@@ -68,7 +68,7 @@ class MiniPlayer extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: total > 0 ? (pos / total).clamp(0.0, 1.0) : null,
-                      minHeight: 4,
+                      minHeight: 5,
                       backgroundColor: scheme.onPrimary.withValues(alpha: 0.25),
                       valueColor: AlwaysStoppedAnimation(scheme.tertiary),
                     ),

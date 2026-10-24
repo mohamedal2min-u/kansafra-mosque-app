@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'quran_data.dart';
 
 import 'player.dart';
 import 'reciters.dart';
+
+const kLastReciterId = 'last_reciter_id';
+const kLastMoshaf = 'last_moshaf';
 
 /// الاستماع: قائمة القرّاء مع تصنيفات وبحث.
 class ListenScreen extends StatefulWidget {
@@ -16,6 +20,23 @@ class _ListenScreenState extends State<ListenScreen> {
   late Future<List<Reciter>> _future = ReciterApi.load();
   ReciterTag _tag = ReciterTag.all;
   String _query = '';
+  int? _lastId; // آخر قارئ اختاره المستخدم (محفوظ)
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((p) {
+      if (mounted) setState(() => _lastId = p.getInt(kLastReciterId));
+    });
+  }
+
+  Future<void> _open(Reciter r) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setInt(kLastReciterId, r.id);
+    if (!mounted) return;
+    setState(() => _lastId = r.id);
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ReciterScreen(reciter: r)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +70,22 @@ class _ListenScreenState extends State<ListenScreen> {
               onChanged: (v) => setState(() => _query = v.trim()),
             ),
           ),
+          if (_lastId != null && _query.isEmpty)
+            Builder(builder: (context) {
+              final last = snap.data!.where((r) => r.id == _lastId).firstOrNull;
+              if (last == null) return const SizedBox.shrink();
+              return Card(
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                color: Theme.of(context).colorScheme.primaryContainer,
+                child: ListTile(
+                  leading: const Icon(Icons.history_rounded),
+                  title: Text(last.name),
+                  subtitle: const Text('آخر قارئ اخترتَه'),
+                  trailing: const Icon(Icons.play_circle_rounded),
+                  onTap: () => _open(last),
+                ),
+              );
+            }),
           SizedBox(
             height: 52,
             child: ListView(
@@ -73,9 +110,7 @@ class _ListenScreenState extends State<ListenScreen> {
               itemBuilder: (context, i) => ListTile(
                 title: Text(list[i].name),
                 subtitle: Text('${list[i].moshafs.length} رواية/تلاوة'),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => ReciterScreen(reciter: list[i])),
-                ),
+                onTap: () => _open(list[i]),
               ),
             ),
           ),
@@ -97,6 +132,19 @@ class _ReciterScreenState extends State<ReciterScreen> {
   late Moshaf _moshaf = widget.reciter.moshafs.first;
 
   @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((p) {
+      final saved = p.getString('$kLastMoshaf:${widget.reciter.id}');
+      final m = widget.reciter.moshafs.where((e) => e.name == saved).firstOrNull;
+      if (m != null && mounted) setState(() => _moshaf = m);
+    });
+  }
+
+  Future<void> _saveMoshaf(Moshaf m) async =>
+      (await SharedPreferences.getInstance()).setString('$kLastMoshaf:${widget.reciter.id}', m.name);
+
+  @override
   Widget build(BuildContext context) {
     final player = QuranPlayer.instance;
     return Scaffold(
@@ -112,7 +160,7 @@ class _ReciterScreenState extends State<ReciterScreen> {
                 for (final m in widget.reciter.moshafs)
                   DropdownMenuItem(value: m, child: Text(m.name, overflow: TextOverflow.ellipsis)),
               ],
-              onChanged: (m) => setState(() => _moshaf = m!),
+              onChanged: (m) { setState(() => _moshaf = m!); _saveMoshaf(m!); },
             ),
           ),
         Expanded(
@@ -126,7 +174,7 @@ class _ReciterScreenState extends State<ReciterScreen> {
                 return ListTile(
                   leading: CircleAvatar(child: Text('$s')),
                   title: Text(QuranData.name(s)),
-                  trailing: Icon(current && player.playing ? Icons.pause_circle : Icons.play_circle),
+                  trailing: Icon(current && player.playing ? Icons.pause_circle : Icons.play_circle, size: 40),
                   selected: current,
                   onTap: () => current ? player.toggle() : player.play(widget.reciter, _moshaf, s),
                 );
@@ -171,13 +219,13 @@ class PlayerBar extends StatelessWidget {
                 },
               ),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                IconButton(icon: const Icon(Icons.skip_next), onPressed: p.next),
+                IconButton(iconSize: 38, icon: const Icon(Icons.skip_next), onPressed: p.next),
                 IconButton(
-                  iconSize: 40,
+                  iconSize: 68,
                   icon: Icon(p.playing ? Icons.pause_circle : Icons.play_circle),
                   onPressed: p.toggle,
                 ),
-                IconButton(icon: const Icon(Icons.skip_previous), onPressed: p.previous),
+                IconButton(iconSize: 38, icon: const Icon(Icons.skip_previous), onPressed: p.previous),
               ]),
             ]),
           ),

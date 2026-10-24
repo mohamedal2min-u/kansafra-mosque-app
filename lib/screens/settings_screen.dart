@@ -170,7 +170,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
               title: Text(v.name),
               value: v.id,
               secondary: IconButton(
-                icon: Icon(_playingId == '${v.id}_${_choice.long}' ? Icons.stop_circle : Icons.play_circle),
+                icon: Icon(_playingId == '${v.id}_${_choice.long}' ? Icons.stop_circle : Icons.play_circle, size: 34),
                 tooltip: 'استماع',
                 onPressed: () => _preview(v),
               ),
