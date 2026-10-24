@@ -4,7 +4,7 @@
 // للرد على رسالة: اكتب الرد في عمود «الرد» أمام الرسالة، فيراه صاحبها في التطبيق.
 const MAX_ROWS = 200;
 // اتركه فارغًا إن لم تفعّل دخول Google. وإلا ضع Web client ID من Google Cloud Console.
-const WEB_CLIENT_ID = '';
+const WEB_CLIENT_ID = '843002779261-9mp73ui95d4f2h3hha9399m05bg3d611.apps.googleusercontent.com';
 
 const DONOR_HEADERS = ['التاريخ', 'الاسم', 'المبلغ', 'المالك'];
 const SUPPORT_HEADERS = ['التاريخ', 'الاسم', 'الهاتف', 'النوع', 'الرسالة', 'المالك', 'الرد', 'تاريخ الرد'];
