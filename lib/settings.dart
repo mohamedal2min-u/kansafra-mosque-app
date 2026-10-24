@@ -18,12 +18,6 @@ const adhanVoices = <AdhanVoice>[
   AdhanVoice('voice2', 'v2', 'أذان مختصر', 'ملكية عامة'),
   AdhanVoice('voice3', 'v3', 'عاقب عزيز', 'Atcovi - CC BY-SA 4.0'),
   AdhanVoice('voice4', 'v4', 'الحرم المكي (2013)', 'Seyfula Islam - CC BY 3.0'),
-  AdhanVoice('voice5', 'v5', 'مسجد شالقار', 'Esetok - CC BY-SA 4.0'),
-  AdhanVoice('voice6', 'v6', 'مسجد الحسن الثاني', 'Fraguando - CC BY-SA 4.0'),
-  AdhanVoice('voice7', 'v7', 'قونية', 'Frans van der Vaart - CC BY 3.0'),
-  AdhanVoice('voice8', 'v8', 'أذان مغاربي', 'Mahfoudou - CC BY-SA 4.0'),
-  AdhanVoice('voice9', 'v9', 'إسطنبول', 'Viceskeeni2 - CC0'),
-  AdhanVoice('voice10', 'v10', 'الحرم المكي - أذان المغرب', '3omar Faruq - CC BY 3.0'),
 ];
 
 /// اختيار المستخدم لصوت التنبيه. [voice] فارغ يعني صوت الإشعار العادي.
