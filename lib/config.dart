@@ -17,8 +17,7 @@ class MosqueConfig {
 
   /// طرق التبرع. اترك [DonationMethod.details] فارغًا حتى تُضاف البيانات الحقيقية من إدارة المسجد.
   static const donationMethods = <DonationMethod>[
-    // ضع شعار شام كاش الرسمي في assets/pay/shamcash.png ثم أضف logo: 'assets/pay/shamcash.png' (وأضفه في pubspec).
-    DonationMethod(title: 'شام كاش', badge: 'ش', color: 0xFF1E8E5A),
+    DonationMethod(title: 'شام كاش', badge: '', color: 0xFF1E8E5A, logo: 'assets/pay/shamcash.png'),
     DonationMethod(title: 'بطاقات الدفع', badge: '', color: 0xFF1A3C6E, logo: 'assets/pay/cards.png'),
     DonationMethod(title: 'PayPal', badge: '', color: 0xFF0070BA, logo: 'assets/pay/paypal.png'),
   ];
