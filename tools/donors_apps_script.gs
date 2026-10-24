@@ -24,6 +24,21 @@ function doGet(e) {
     });
   }
 
+  // نقل سجل الجهاز إلى أول حساب Google يدخل منه. الحساب الثاني على الجهاز نفسه لا يأخذ شيئًا.
+  if (p.action === 'claim') {
+    if (owner.indexOf('g:') !== 0 || !/^[a-f0-9]{32}$/.test(p.device || '')) return json({ error: 'auth' });
+    return withLock(function () {
+      const props = PropertiesService.getScriptProperties();
+      const key = 'dev:' + p.device;
+      const linked = props.getProperty(key);
+      if (linked && linked !== owner) return json({ linked: false, moved: 0 });
+      props.setProperty(key, owner);
+      const from = 'd:' + p.device;
+      const moved = relabel(sheet, 4, from, owner) + relabel(supportSheet(ss), 6, from, owner);
+      return json({ linked: true, moved: moved });
+    });
+  }
+
   if (p.action === 'mine') {
     if (!owner) return json({ donations: [], messages: [] });
     const sup = supportSheet(ss);
@@ -68,6 +83,20 @@ function verifyToken(t) {
   if (r.getResponseCode() !== 200) return null;
   const j = JSON.parse(r.getContentText());
   return j.aud === WEB_CLIENT_ID ? j.sub : null;
+}
+
+// يغيّر مالك الصفوف من [from] إلى [to] في العمود [col] ويرجع عددها.
+function relabel(sheet, col, from, to) {
+  const last = sheet.getLastRow();
+  if (last < 2) return 0;
+  const range = sheet.getRange(2, col, last - 1, 1);
+  const vals = range.getValues();
+  let n = 0;
+  for (let i = 0; i < vals.length; i++) {
+    if (vals[i][0] === from) { vals[i][0] = to; n++; }
+  }
+  if (n) range.setValues(vals);
+  return n;
 }
 
 function supportSheet(ss) {

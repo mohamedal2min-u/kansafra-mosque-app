@@ -26,7 +26,16 @@ class _AccountScreenState extends State<AccountScreen> {
 
   Future<void> _toggleSignIn() async {
     try {
-      _id.user == null ? await _id.signIn() : await _id.signOut();
+      if (_id.user == null) {
+        await _id.signIn();
+        if (mounted && _id.movedOnSignIn > 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('نُقل سجلّك (${_id.movedOnSignIn}) إلى حسابك.')),
+          );
+        }
+      } else {
+        await _id.signOut();
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذّر الدخول بحساب Google.')));
@@ -53,7 +62,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 leading: const Icon(Icons.account_circle),
                 title: Text(_id.user?.email ?? 'سجلّك محفوظ على هذا الجهاز'),
                 subtitle: Text(_id.googleEnabled
-                    ? (_id.user == null ? 'ادخل بحساب Google لتراه من أي جهاز.' : 'سجلك مرتبط بحسابك.')
+                    ? (_id.user == null ? 'ادخل بحساب Google وينتقل سجلّ هذا الهاتف إلى حسابك لتراه من أي جهاز.' : 'سجلك مرتبط بحسابك.')
                     : 'لا حاجة لتسجيل دخول.'),
                 trailing: _id.googleEnabled
                     ? TextButton(onPressed: _toggleSignIn, child: Text(_id.user == null ? 'دخول' : 'خروج'))

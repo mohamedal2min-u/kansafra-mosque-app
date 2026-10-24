@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
@@ -15,6 +16,9 @@ class Identity extends ChangeNotifier {
   static const _kDevice = 'device_id';
   String? _device;
   GoogleSignInAccount? _user;
+
+  /// عدد السجلات التي نُقلت من الهاتف إلى الحساب في آخر دخول (لرسالة للمستخدم).
+  int movedOnSignIn = 0;
 
   bool get googleEnabled => MosqueConfig.googleWebClientId.isNotEmpty;
   GoogleSignInAccount? get user => _user;
@@ -40,12 +44,14 @@ class Identity extends ChangeNotifier {
     if (!googleEnabled) return;
     try {
       _user = await _gsi.signInSilently();
+      if (_user != null) await claimDeviceHistory();
       notifyListeners();
     } catch (_) {}
   }
 
   Future<void> signIn() async {
     _user = await _gsi.signIn();
+    if (_user != null) movedOnSignIn = await claimDeviceHistory();
     notifyListeners();
   }
 
@@ -53,6 +59,18 @@ class Identity extends ChangeNotifier {
     await _gsi.signOut();
     _user = null;
     notifyListeners();
+  }
+
+  /// ينقل سجل هذا الهاتف إلى الحساب. الجدول يفعلها لأول حساب فقط، ويرجع عدد السجلات المنقولة.
+  Future<int> claimDeviceHistory() async {
+    try {
+      final uri = Uri.parse(MosqueConfig.donorsUrl).replace(queryParameters: await params().then((m) => {...m, 'action': 'claim'}));
+      final res = await http.get(uri).timeout(const Duration(seconds: 20));
+      final m = RegExp(r'"moved":(\d+)').firstMatch(res.body);
+      return m == null ? 0 : int.parse(m.group(1)!);
+    } catch (_) {
+      return 0;
+    }
   }
 
   /// معاملات تُرسل إلى الجدول: device دائمًا، و idToken إن كان المستخدم مسجّلًا بحساب Google.
