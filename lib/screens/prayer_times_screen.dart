@@ -26,6 +26,8 @@ class PrayerTimesScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        Center(child: Image.asset('assets/logo/icon.png', height: 84)),
+        const SizedBox(height: 8),
         Text(
           DateFormat.yMMMMEEEEd('ar').format(DateTime.now()),
           textAlign: TextAlign.center,
