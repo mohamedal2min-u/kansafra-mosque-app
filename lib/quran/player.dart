@@ -50,6 +50,7 @@ class QuranPlayer extends ChangeNotifier {
           source = AudioSource.file(f.path, tag: tag);
         } else if (await AudioStore.isRegular(r.id)) {
           // قارئ معتاد (أكثر من ساعة استماع): تُحفظ السورة أثناء الاستماع.
+          // ignore: experimental_member_use
           source = LockCachingAudioSource(Uri.parse(m.urlFor(s)), cacheFile: f, tag: tag);
         } else {
           source = AudioSource.uri(Uri.parse(m.urlFor(s)), tag: tag);
