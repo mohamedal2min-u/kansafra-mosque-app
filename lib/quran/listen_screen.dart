@@ -373,14 +373,19 @@ class _ReciterScreenState extends State<ReciterScreen> {
                   subtitle: _saved.contains(s) ? const Text('محفوظة على الهاتف (تعمل بدون إنترنت)') : null,
                   trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                     if (_saved.contains(s)) Icon(Icons.download_done_rounded, color: Theme.of(context).colorScheme.primary),
-                    const SizedBox(width: 6),
-                    Icon(current && player.playing ? Icons.pause_circle : Icons.play_circle, size: 40),
+                    // زر التشغيل: صوت فقط بدون فتح النص.
+                    IconButton(
+                      iconSize: 40,
+                      tooltip: current && player.playing ? 'إيقاف مؤقت' : 'تشغيل',
+                      icon: Icon(current && player.playing ? Icons.pause_circle : Icons.play_circle),
+                      onPressed: () => current ? player.toggle() : player.play(widget.reciter, _moshaf, s),
+                    ),
                   ]),
                   selected: current,
+                  // الضغط على السطر: يفتح النص مع التتبّع (ويشغّل السورة إن لم تكن شغّالة).
                   onTap: () async {
                     if (!current) await player.play(widget.reciter, _moshaf, s);
                     if (!context.mounted) return;
-                    // تُفتح الآيات ويُعلَّم الجاري تلاوته بالأحمر.
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => SurahReaderScreen(surah: s, follow: true)),
                     );

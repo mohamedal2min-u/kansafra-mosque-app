@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'listen_screen.dart' show PlayerBar;
 import 'player.dart';
+import 'timings.dart';
 import 'quran_data.dart';
 
 /// قائمة السور (القراءة تعمل بدون إنترنت: النص مضمّن في التطبيق).
@@ -46,6 +47,9 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   final _keys = <int, GlobalKey>{};
   int _current = -1; // فهرس الآية الحالية (من 0)
   List<int>? _cum; // الأطوال التراكمية للنص لتقدير موضع التلاوة
+  List<int>? _starts; // بدايات الآيات الحقيقية (ms) إن توفّرت
+  bool _timingsAsked = false;
+  int _introWeight = 0; // وزن الاستعاذة/البسملة قبل الآية الأولى في التقدير
 
   @override
   void initState() {
@@ -56,9 +60,12 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     });
     if (widget.follow) {
       final n = QuranData.verseCount(widget.surah);
-      var acc = 0;
+      // البسملة تُتلى قبل أول آية في كل سورة عدا الفاتحة (هي آيتها الأولى) والتوبة.
+      _introWeight = (widget.surah == 1 || widget.surah == 9) ? 0 : 45;
+      var acc = _introWeight;
       _cum = [
-        for (var i = 1; i <= n; i++) acc += QuranData.verse(widget.surah, i).length,
+        // وزن كل آية = حروفها + وقفة قصيرة بين الآيات.
+        for (var i = 1; i <= n; i++) acc += QuranData.verse(widget.surah, i).length + 6,
       ];
       QuranPlayer.instance.addListener(_onPlayer);
       QuranPlayer.instance.position.listen(_onPosition);
@@ -69,15 +76,31 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     if (mounted) setState(() {});
   }
 
-  /// تقدير الآية الحالية بنسبة الوقت إلى طول النص. تقريبي: قد يتقدّم أو يتأخر آيات قليلة.
+  /// الآية الحالية: بالتوقيت الحقيقي إن توفّر، وإلا بتقدير نسبة الوقت إلى طول النص.
   void _onPosition(Duration pos) {
     final p = QuranPlayer.instance;
     final dur = p.duration;
     if (!mounted || p.surah != widget.surah || dur == null || dur.inMilliseconds == 0 || _cum == null) return;
+    if (!_timingsAsked && p.reciter != null) {
+      _timingsAsked = true;
+      VerseTimings.load(p.reciter!, widget.surah, dur).then((t) {
+        if (mounted) _starts = t;
+      });
+    }
     final frac = (pos.inMilliseconds / dur.inMilliseconds).clamp(0.0, 1.0);
-    final target = frac * _cum!.last;
-    var idx = _cum!.indexWhere((c) => c >= target);
-    if (idx < 0) idx = _cum!.length - 1;
+    int idx;
+    if (_starts != null) {
+      idx = _starts!.lastIndexWhere((st) => st <= pos.inMilliseconds);
+      if (idx < 0) idx = 0;
+    } else {
+      final target = frac * _cum!.last;
+      if (target < _introWeight) {
+        idx = 0;
+      } else {
+        idx = _cum!.indexWhere((c) => c >= target);
+        if (idx < 0) idx = _cum!.length - 1;
+      }
+    }
     if (idx != _current) {
       setState(() => _current = idx);
       _reveal(idx, frac);
