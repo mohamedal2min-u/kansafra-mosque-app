@@ -25,7 +25,8 @@ class QuranHome extends StatelessWidget {
       length: 2,
       child: Column(children: [
         TabBar(tabs: [Tab(text: 'استماع'), Tab(text: 'قراءة (بدون إنترنت)')]),
-        Expanded(child: TabBarView(children: [ListenScreen(), SurahListScreen()])),
+        Expanded(
+            child: TabBarView(children: [ListenScreen(), SurahListScreen()])),
       ]),
     );
   }

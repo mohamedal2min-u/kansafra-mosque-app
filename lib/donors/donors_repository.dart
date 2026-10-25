@@ -13,13 +13,19 @@ class Donor {
   const Donor({required this.name, required this.amount, required this.date});
 
   String get displayName => name.trim().isEmpty ? 'فاعل خير' : name.trim();
-  String get line => amount.trim().isEmpty ? '$displayName تبرّع' : '$displayName تبرّع بـ ${amount.trim()}';
+  String get line => amount.trim().isEmpty
+      ? '$displayName تبرّع'
+      : '$displayName تبرّع بـ ${amount.trim()}';
 }
 
 /// يستخرج أول رقم من نص المبلغ (يدعم الأرقام العربية الهندية). 0 إن لم يوجد.
 double parseAmount(String s) {
   const ar = '٠١٢٣٤٥٦٧٨٩';
-  final t = s.split('').map((c) => ar.contains(c) ? '${ar.indexOf(c)}' : c).join().replaceAll(',', '');
+  final t = s
+      .split('')
+      .map((c) => ar.contains(c) ? '${ar.indexOf(c)}' : c)
+      .join()
+      .replaceAll(',', '');
   final m = RegExp(r'\d+(\.\d+)?').firstMatch(t);
   return m == null ? 0 : double.parse(m.group(0)!);
 }
@@ -49,7 +55,8 @@ List<TopDonor> topDonors(List<Donor> donors, {int n = 3}) {
       counts[k] = (counts[k] ?? 0) + 1;
     }
   }
-  entries.addAll(totals.entries.map((e) => TopDonor(e.key, e.value, counts[e.key]!)));
+  entries.addAll(
+      totals.entries.map((e) => TopDonor(e.key, e.value, counts[e.key]!)));
   entries.sort((a, b) => b.total.compareTo(a.total));
   return entries.take(n).toList();
 }
@@ -75,7 +82,8 @@ class SheetsDonorsRepository implements DonorsRepository {
 
   @override
   Future<List<Donor>> donors() async {
-    final res = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 20));
+    final res =
+        await http.get(Uri.parse(url)).timeout(const Duration(seconds: 20));
     if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
     return _parse(utf8.decode(res.bodyBytes));
   }
@@ -101,8 +109,8 @@ class InMemoryDonorsRepository implements DonorsRepository {
   Future<List<Donor>> donors() async => List.unmodifiable(_list.reversed);
 
   @override
-  Future<void> add({String? name, String? amount}) async =>
-      _list.add(Donor(name: name ?? '', amount: amount ?? '', date: DateTime.now()));
+  Future<void> add({String? name, String? amount}) async => _list
+      .add(Donor(name: name ?? '', amount: amount ?? '', date: DateTime.now()));
 }
 
 final DonorsRepository donorsRepository = MosqueConfig.donorsUrl.isEmpty

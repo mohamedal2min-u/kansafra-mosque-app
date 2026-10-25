@@ -18,7 +18,8 @@ class AdhanService {
 
   /// حالة الأذونات المطلوبة لعمل الأذان والتطبيق مغلق (أندرويد فقط).
   Future<AdhanPermissions> permissions() async {
-    final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
     if (android == null) return const AdhanPermissions(true, true);
     return AdhanPermissions(
       await android.areNotificationsEnabled() ?? true,
@@ -28,14 +29,16 @@ class AdhanService {
 
   /// يطلب إذن الإشعارات، وإن كان مرفوضًا نهائيًا يفتح إعدادات التطبيق في الهاتف.
   Future<void> enableNotifications() async {
-    final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
     await android?.requestNotificationsPermission();
     if (!(await permissions()).notifications) await openAppSettings();
     await scheduleAll(force: true);
   }
 
   Future<void> enableExactAlarms() async {
-    final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
     await android?.requestExactAlarmsPermission();
     await scheduleAll(force: true);
   }
@@ -63,7 +66,8 @@ class AdhanService {
     final enabled = await AppSettings.adhanEnabled();
     final sound = await AppSettings.adhanChoice();
     final now0 = DateTime.now();
-    final signature = '${now0.year}-${now0.month}-${now0.day}|$enabled|${sound.id}|'
+    final signature =
+        '${now0.year}-${now0.month}-${now0.day}|$enabled|${sound.id}|'
         '${MosqueConfig.latitude},${MosqueConfig.longitude}|${MosqueConfig.minuteAdjustments}';
     final prefs = await SharedPreferences.getInstance();
     if (!force && prefs.getString('sched_sig') == signature) return;
@@ -84,10 +88,12 @@ class AdhanService {
         'isha': times.isha,
       };
       for (final e in list.entries) {
-        final at = tz.TZDateTime.from(PrayerCalc.adjusted(e.key, e.value), tz.local);
+        final at =
+            tz.TZDateTime.from(PrayerCalc.adjusted(e.key, e.value), tz.local);
         id++;
         if (at.isBefore(now)) continue;
-        final raw = sound.rawNameFor(e.key, at.millisecondsSinceEpoch ~/ 86400000);
+        final raw =
+            sound.rawNameFor(e.key, at.millisecondsSinceEpoch ~/ 86400000);
         await _plugin.zonedSchedule(
           id,
           'حان الآن موعد أذان ${PrayerCalc.names[e.key]}',
@@ -96,8 +102,12 @@ class AdhanService {
           NotificationDetails(
             android: AndroidNotificationDetails(
               // صوت القناة لا يتغير بعد إنشائها، فلكل صوت قناة مستقلة.
-              sound.auto && sound.custom == null ? 'adhan_auto_$raw' : 'adhan_${sound.id}',
-              sound.auto && sound.custom == null ? 'الأذان (تلقائي: $raw)' : 'الأذان (${sound.label})',
+              sound.auto && sound.custom == null
+                  ? 'adhan_auto_$raw'
+                  : 'adhan_${sound.id}',
+              sound.auto && sound.custom == null
+                  ? 'الأذان (تلقائي: $raw)'
+                  : 'الأذان (${sound.label})',
               channelDescription: 'تنبيهات أوقات الصلاة',
               importance: Importance.max,
               priority: Priority.high,
@@ -108,7 +118,9 @@ class AdhanService {
               enableVibration: true,
               sound: sound.custom != null
                   ? UriAndroidNotificationSound(sound.custom!.uri)
-                  : raw == null ? null : RawResourceAndroidNotificationSound(raw),
+                  : raw == null
+                      ? null
+                      : RawResourceAndroidNotificationSound(raw),
             ),
             iOS: const DarwinNotificationDetails(presentSound: true),
           ),

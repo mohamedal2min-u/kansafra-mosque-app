@@ -45,17 +45,22 @@ class Reciter {
       if (_madinah.any(name.contains)) ReciterTag.madinah,
       if (all.contains('مجود')) ReciterTag.tajweed,
       if (all.contains('معلم')) ReciterTag.teaching,
-      if (moshafs.any((m) => !m.name.contains('مجود') && !m.name.contains('معلم')))
+      if (moshafs
+          .any((m) => !m.name.contains('مجود') && !m.name.contains('معلم')))
         ReciterTag.murattal,
     };
   }
 }
 
 /// يجلب القرّاء من واجهة mp3quran.net. يحفظ نسخة للاستخدام لاحقًا إن انقطع الإنترنت.
-Map<String, dynamic> _decode(List<int> bytes) => jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+Map<String, dynamic> _decode(List<int> bytes) =>
+    jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
 
 class ReciterApi {
-  static const _hosts = ['https://www.mp3quran.net/api/v3', 'https://mp3quran.net/api/v3'];
+  static const _hosts = [
+    'https://www.mp3quran.net/api/v3',
+    'https://mp3quran.net/api/v3'
+  ];
   static const _cacheKey = 'reciters_cache_v1';
   static List<Reciter>? _cache;
   static String? lastError; // سبب آخر فشل، للتشخيص
@@ -75,7 +80,8 @@ class ReciterApi {
             .whereType<int>()
             .toList();
         if (server.isEmpty || list.isEmpty) continue;
-        moshafs.add(Moshaf(m['name']?.toString() ?? '', server.endsWith('/') ? server : '$server/', list));
+        moshafs.add(Moshaf(m['name']?.toString() ?? '',
+            server.endsWith('/') ? server : '$server/', list));
       }
       final id = (r['id'] as num?)?.toInt();
       if (id == null || moshafs.isEmpty) continue;
@@ -88,7 +94,8 @@ class ReciterApi {
         for (final r in jsonDecode(json) as List)
           Reciter(r['i'] as int, r['n'] as String, [
             for (final m in r['m'] as List)
-              Moshaf(m[0] as String, m[1] as String, (m[2] as String).split(',').map(int.parse).toList()),
+              Moshaf(m[0] as String, m[1] as String,
+                  (m[2] as String).split(',').map(int.parse).toList()),
           ]),
       ];
 
@@ -97,7 +104,9 @@ class ReciterApi {
           {
             'i': r.id,
             'n': r.name,
-            'm': [for (final m in r.moshafs) [m.name, m.server, m.surahs.join(',')]],
+            'm': [
+              for (final m in r.moshafs) [m.name, m.server, m.surahs.join(',')]
+            ],
           },
       ]);
 
@@ -108,16 +117,16 @@ class ReciterApi {
       try {
         final res = await http
             .get(Uri.parse('$host/reciters?language=ar'), headers: const {
-              'Accept': 'application/json',
-              'User-Agent': 'Mozilla/5.0 (Linux; Android 13) KansafraMosque/1.0',
-            })
-            .timeout(const Duration(seconds: 60));
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 13) KansafraMosque/1.0',
+        }).timeout(const Duration(seconds: 60));
         if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
         final list = _parse(await compute(_decode, res.bodyBytes));
         if (list.isEmpty) throw Exception('قائمة القرّاء فارغة');
         _cache = list;
         try {
-          (await SharedPreferences.getInstance()).setString(_cacheKey, _toCache(list));
+          (await SharedPreferences.getInstance())
+              .setString(_cacheKey, _toCache(list));
         } catch (_) {}
         lastError = null;
         return list;
@@ -127,7 +136,8 @@ class ReciterApi {
     }
     // لا إنترنت أو فشل الخادم: استخدم آخر نسخة محفوظة إن وُجدت.
     try {
-      final cached = (await SharedPreferences.getInstance()).getString(_cacheKey);
+      final cached =
+          (await SharedPreferences.getInstance()).getString(_cacheKey);
       if (cached != null) return _cache = _fromCache(cached);
     } catch (_) {}
     lastError = '$err';

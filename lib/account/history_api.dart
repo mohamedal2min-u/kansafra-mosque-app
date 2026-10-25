@@ -39,7 +39,10 @@ Future<History> fetchHistory() async {
   if (j['error'] != null) throw Exception('auth');
   DateTime d(String s) => DateTime.tryParse(s) ?? DateTime.now();
   return History(
-    [for (final r in j['donations'] as List) MyDonation(d(r['date']), r['name'], r['amount'])],
+    [
+      for (final r in j['donations'] as List)
+        MyDonation(d(r['date']), r['name'], r['amount'])
+    ],
     [
       for (final r in j['messages'] as List)
         MyMessage(d(r['date']), r['type'], r['message'], r['reply'],

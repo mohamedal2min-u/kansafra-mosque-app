@@ -53,26 +53,46 @@ class AudioStore {
     return out;
   }
 
+  /// مسارات السور المحفوظة (سورة ← مسار الملف) بقراءة المجلد مرة واحدة.
+  static Future<Map<int, String>> savedPaths(Reciter r, Moshaf m) async {
+    if (!supported) return {};
+    final prefix = _prefix(r, m);
+    final out = <int, String>{};
+    await for (final e in (await _root()).list()) {
+      final name = e.uri.pathSegments.last;
+      if (e is File && name.startsWith(prefix) && name.endsWith('.mp3')) {
+        final n = int.tryParse(name.substring(prefix.length, name.length - 4));
+        if (n != null) out[n] = e.path;
+      }
+    }
+    return out;
+  }
+
   /// قارئ واحد فقط: يحذف كل ما حُفظ لغير هذا القارئ/الرواية.
   static Future<void> keepOnly(Reciter r, Moshaf m) async {
     if (!supported) return;
     final prefix = _prefix(r, m);
     await for (final e in (await _root()).list()) {
-      if (e is File && !e.uri.pathSegments.last.startsWith(prefix)) await e.delete();
+      if (e is File && !e.uri.pathSegments.last.startsWith(prefix))
+        await e.delete();
     }
   }
 
   static const _pinKey = 'pinned_reciter_v1';
 
   static Future<void> setPinned(Reciter r, Moshaf m) async =>
-      (await SharedPreferences.getInstance()).setString(_pinKey, jsonEncode({'id': r.id, 'name': r.name, 'm': m.name}));
+      (await SharedPreferences.getInstance()).setString(
+          _pinKey, jsonEncode({'id': r.id, 'name': r.name, 'm': m.name}));
 
   static Future<Map<String, dynamic>?> pinned() async {
     final raw = (await SharedPreferences.getInstance()).getString(_pinKey);
-    return raw == null ? null : (jsonDecode(raw) as Map).cast<String, dynamic>();
+    return raw == null
+        ? null
+        : (jsonDecode(raw) as Map).cast<String, dynamic>();
   }
 
-  static Future<void> clearPinned() async => (await SharedPreferences.getInstance()).remove(_pinKey);
+  static Future<void> clearPinned() async =>
+      (await SharedPreferences.getInstance()).remove(_pinKey);
 
   static Future<int> totalBytes() async {
     if (!supported) return 0;
@@ -96,17 +116,23 @@ class AudioStore {
   static Future<Map<String, int>> _load() async {
     if (_stats != null) return _stats!;
     final raw = (await SharedPreferences.getInstance()).getString(_statsKey);
-    _stats = raw == null ? {} : (jsonDecode(raw) as Map).map((k, v) => MapEntry('$k', (v as num).toInt()));
+    _stats = raw == null
+        ? {}
+        : (jsonDecode(raw) as Map)
+            .map((k, v) => MapEntry('$k', (v as num).toInt()));
     return _stats!;
   }
 
-  static Future<int> listenSeconds(int reciterId) async => (await _load())['$reciterId'] ?? 0;
+  static Future<int> listenSeconds(int reciterId) async =>
+      (await _load())['$reciterId'] ?? 0;
 
-  static Future<bool> isRegular(int reciterId) async => await listenSeconds(reciterId) >= kRegularListenSeconds;
+  static Future<bool> isRegular(int reciterId) async =>
+      await listenSeconds(reciterId) >= kRegularListenSeconds;
 
   static Future<void> addListen(int reciterId, int seconds) async {
     final m = await _load();
     m['$reciterId'] = (m['$reciterId'] ?? 0) + seconds;
-    await (await SharedPreferences.getInstance()).setString(_statsKey, jsonEncode(m));
+    await (await SharedPreferences.getInstance())
+        .setString(_statsKey, jsonEncode(m));
   }
 }

@@ -30,7 +30,8 @@ class _AccountScreenState extends State<AccountScreen> {
         await _id.signIn();
         if (mounted && _id.movedOnSignIn > 0) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('نُقل سجلّك (${_id.movedOnSignIn}) إلى حسابك.')),
+            SnackBar(
+                content: Text('نُقل سجلّك (${_id.movedOnSignIn}) إلى حسابك.')),
           );
         }
       } else {
@@ -38,7 +39,8 @@ class _AccountScreenState extends State<AccountScreen> {
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذّر الدخول بحساب Google.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تعذّر الدخول بحساب Google.')));
       }
     }
     _reload();
@@ -51,7 +53,8 @@ class _AccountScreenState extends State<AccountScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('حسابي'),
-          bottom: const TabBar(tabs: [Tab(text: 'تبرعاتي'), Tab(text: 'رسائلي')]),
+          bottom:
+              const TabBar(tabs: [Tab(text: 'تبرعاتي'), Tab(text: 'رسائلي')]),
         ),
         body: Column(children: [
           ListenableBuilder(
@@ -61,13 +64,21 @@ class _AccountScreenState extends State<AccountScreen> {
               child: ListTile(
                 leading: _id.user?.photoUrl == null
                     ? const Icon(Icons.account_circle, size: 40)
-                    : CircleAvatar(radius: 22, backgroundImage: NetworkImage(_id.user!.photoUrl!)),
-                title: Text(_id.user?.displayName ?? _id.user?.email ?? 'سجلّك محفوظ على هذا الجهاز'),
+                    : CircleAvatar(
+                        radius: 22,
+                        backgroundImage: NetworkImage(_id.user!.photoUrl!)),
+                title: Text(_id.user?.displayName ??
+                    _id.user?.email ??
+                    'سجلّك محفوظ على هذا الجهاز'),
                 subtitle: Text(_id.googleEnabled
-                    ? (_id.user == null ? 'ادخل بحساب Google وينتقل سجلّ هذا الهاتف إلى حسابك لتراه من أي جهاز.' : '${_id.user!.email} • سجلك مرتبط بحسابك.')
+                    ? (_id.user == null
+                        ? 'ادخل بحساب Google وينتقل سجلّ هذا الهاتف إلى حسابك لتراه من أي جهاز.'
+                        : '${_id.user!.email} • سجلك مرتبط بحسابك.')
                     : 'لا حاجة لتسجيل دخول.'),
                 trailing: _id.googleEnabled
-                    ? TextButton(onPressed: _toggleSignIn, child: Text(_id.user == null ? 'دخول' : 'خروج'))
+                    ? TextButton(
+                        onPressed: _toggleSignIn,
+                        child: Text(_id.user == null ? 'دخول' : 'خروج'))
                     : null,
               ),
             ),
@@ -84,12 +95,15 @@ class _AccountScreenState extends State<AccountScreen> {
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
                       const Text('تعذّر تحميل السجل. تحقّق من الإنترنت.'),
                       const SizedBox(height: 12),
-                      FilledButton(onPressed: _reload, child: const Text('إعادة المحاولة')),
+                      FilledButton(
+                          onPressed: _reload,
+                          child: const Text('إعادة المحاولة')),
                     ]),
                   );
                 }
                 final h = snap.data!;
-                return TabBarView(children: [_Donations(h.donations), _Messages(h.messages)]);
+                return TabBarView(
+                    children: [_Donations(h.donations), _Messages(h.messages)]);
               },
             ),
           ),
@@ -109,7 +123,8 @@ class _Donations extends StatelessWidget {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
-          child: Text('تظهر تبرعاتك هنا بعد تأكيد إدارة المسجد وصول الدفع.', textAlign: TextAlign.center),
+          child: Text('تظهر تبرعاتك هنا بعد تأكيد إدارة المسجد وصول الدفع.',
+              textAlign: TextAlign.center),
         ),
       );
     }
@@ -117,15 +132,20 @@ class _Donations extends StatelessWidget {
     return ListView(children: [
       ListTile(
         title: const Text('مجموع تبرعاتك'),
-        trailing: Text(total == total.roundToDouble() ? '${total.toInt()}' : total.toStringAsFixed(1),
+        trailing: Text(
+            total == total.roundToDouble()
+                ? '${total.toInt()}'
+                : total.toStringAsFixed(1),
             style: Theme.of(context).textTheme.titleLarge),
       ),
       const Divider(),
       for (final d in items)
         ListTile(
-          leading: Icon(Icons.favorite_rounded, color: Theme.of(context).colorScheme.tertiary),
+          leading: Icon(Icons.favorite_rounded,
+              color: Theme.of(context).colorScheme.tertiary),
           title: Text(d.amount.isEmpty ? 'تبرّعت' : 'تبرّعت بـ ${d.amount}'),
-          subtitle: Text('${_when(d.date)}${d.name.isEmpty ? '' : ' • ${d.name}'}'),
+          subtitle:
+              Text('${_when(d.date)}${d.name.isEmpty ? '' : ' • ${d.name}'}'),
         ),
     ]);
   }
@@ -137,15 +157,18 @@ class _Messages extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const Center(child: Text('لا توجد رسائل دعم بعد.'));
+    if (items.isEmpty)
+      return const Center(child: Text('لا توجد رسائل دعم بعد.'));
     final scheme = Theme.of(context).colorScheme;
     return ListView(padding: const EdgeInsets.all(12), children: [
       for (final m in items)
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('${m.type} • ${_when(m.date)}', style: Theme.of(context).textTheme.labelMedium),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('${m.type} • ${_when(m.date)}',
+                  style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 4),
               Text(m.message),
               const SizedBox(height: 8),
@@ -155,13 +178,18 @@ class _Messages extends StatelessWidget {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(8)),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('رد المسجد${m.replyDate == null ? '' : ' • ${_when(m.replyDate!)}'}',
-                        style: Theme.of(context).textTheme.labelMedium),
-                    const SizedBox(height: 4),
-                    Text(m.reply),
-                  ]),
+                  decoration: BoxDecoration(
+                      color: scheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(8)),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                            'رد المسجد${m.replyDate == null ? '' : ' • ${_when(m.replyDate!)}'}',
+                            style: Theme.of(context).textTheme.labelMedium),
+                        const SizedBox(height: 4),
+                        Text(m.reply),
+                      ]),
                 ),
             ]),
           ),

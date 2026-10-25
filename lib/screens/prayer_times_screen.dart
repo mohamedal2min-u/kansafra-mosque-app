@@ -15,7 +15,8 @@ class PrayerTimesScreen extends StatefulWidget {
   State<PrayerTimesScreen> createState() => _PrayerTimesScreenState();
 }
 
-class _PrayerTimesScreenState extends State<PrayerTimesScreen> with WidgetsBindingObserver {
+class _PrayerTimesScreenState extends State<PrayerTimesScreen>
+    with WidgetsBindingObserver {
   static const _order = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'];
   static const _labels = {'sunrise': 'الشروق', ...PrayerCalc.names};
   static const _icons = {
@@ -72,10 +73,16 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> with WidgetsBindi
   Map<String, DateTime> _times(DateTime d) {
     final t = PrayerCalc.forDate(d);
     final raw = {
-      'fajr': t.fajr, 'sunrise': t.sunrise, 'dhuhr': t.dhuhr,
-      'asr': t.asr, 'maghrib': t.maghrib, 'isha': t.isha,
+      'fajr': t.fajr,
+      'sunrise': t.sunrise,
+      'dhuhr': t.dhuhr,
+      'asr': t.asr,
+      'maghrib': t.maghrib,
+      'isha': t.isha,
     };
-    return {for (final e in raw.entries) e.key: PrayerCalc.adjusted(e.key, e.value)};
+    return {
+      for (final e in raw.entries) e.key: PrayerCalc.adjusted(e.key, e.value)
+    };
   }
 
   /// يحسب مواقيت اليوم مرة واحدة، ويُعاد الحساب عند تغيّر اليوم أو بعد مرور الصلاة القادمة فقط.
@@ -84,7 +91,10 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> with WidgetsBindi
     _today = _times(now);
     String? key;
     for (final k in _order) {
-      if (_today[k]!.isAfter(now)) { key = k; break; }
+      if (_today[k]!.isAfter(now)) {
+        key = k;
+        break;
+      }
     }
     if (key == null) {
       _nextKey = 'fajr';
@@ -97,7 +107,8 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> with WidgetsBindi
 
   void _tick() {
     final now = DateTime.now();
-    final sameDay = now.year == _day.year && now.month == _day.month && now.day == _day.day;
+    final sameDay =
+        now.year == _day.year && now.month == _day.month && now.day == _day.day;
     if (!sameDay || !_nextTime.isAfter(now)) {
       final old = _nextKey;
       _compute(now);
@@ -105,7 +116,8 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> with WidgetsBindi
     }
     final left = _nextTime.difference(now);
     String two(int n) => n.toString().padLeft(2, '0');
-    _countdown.value = '${two(left.inHours)}:${two(left.inMinutes % 60)}:${two(left.inSeconds % 60)}';
+    _countdown.value =
+        '${two(left.inHours)}:${two(left.inMinutes % 60)}:${two(left.inSeconds % 60)}';
   }
 
   @override
@@ -134,20 +146,30 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> with WidgetsBindi
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
               side: BorderSide(
-                color: k == _nextKey ? scheme.tertiary : scheme.outlineVariant.withValues(alpha: 0.6),
+                color: k == _nextKey
+                    ? scheme.tertiary
+                    : scheme.outlineVariant.withValues(alpha: 0.6),
                 width: k == _nextKey ? 1.6 : 1,
               ),
             ),
             child: ListTile(
               leading: CircleAvatar(
                 radius: 20,
-                backgroundColor: k == _nextKey ? scheme.tertiary : scheme.primaryContainer,
-                child: Icon(_icons[k], color: k == _nextKey ? Colors.white : scheme.primary, size: 22),
+                backgroundColor:
+                    k == _nextKey ? scheme.tertiary : scheme.primaryContainer,
+                child: Icon(_icons[k],
+                    color: k == _nextKey ? Colors.white : scheme.primary,
+                    size: 22),
               ),
-              title: Text(_labels[k]!, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              title: Text(_labels[k]!,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 16)),
               subtitle: k == _nextKey ? const Text('الصلاة القادمة') : null,
               trailing: Text(fmt.format(_today[k]!),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)),
             ),
           ),
       ],
@@ -179,15 +201,24 @@ class _NextPrayerCard extends StatelessWidget {
           child: SizedBox(
             width: double.infinity,
             child: Column(children: [
-              Text('الصلاة القادمة', style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 14)),
-              Text(label, style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700)),
+              Text('الصلاة القادمة',
+                  style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 14)),
+              Text(label,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700)),
               const SizedBox(height: 6),
               ValueListenableBuilder<String>(
                 valueListenable: countdown,
                 builder: (_, v, __) => Text(
                   v,
                   style: const TextStyle(
-                    color: Color(0xFFF1D58A), fontSize: 40, fontWeight: FontWeight.w700,
+                    color: Color(0xFFF1D58A),
+                    fontSize: 40,
+                    fontWeight: FontWeight.w700,
                     fontFeatures: [FontFeature.tabularFigures()],
                   ),
                 ),

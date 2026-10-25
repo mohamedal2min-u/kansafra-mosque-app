@@ -28,37 +28,53 @@ class MiniPlayer extends StatelessWidget {
               child: Row(children: [
                 IconButton(
                   tooltip: 'إيقاف',
-                  icon: Icon(Icons.stop_circle_rounded, color: scheme.onPrimary, size: 40),
+                  icon: Icon(Icons.stop_circle_rounded,
+                      color: scheme.onPrimary, size: 40),
                   onPressed: p.stop,
                 ),
                 IconButton(
                   tooltip: p.playing ? 'إيقاف مؤقت' : 'تشغيل',
-                  icon: Icon(p.playing ? Icons.pause_circle_rounded : Icons.play_circle_rounded,
-                      color: scheme.onPrimary, size: 54),
+                  icon: Icon(
+                      p.playing
+                          ? Icons.pause_circle_rounded
+                          : Icons.play_circle_rounded,
+                      color: scheme.onPrimary,
+                      size: 54),
                   onPressed: p.toggle,
                 ),
                 Expanded(
                   child: InkWell(
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => SurahReaderScreen(surah: p.surah!, follow: true)),
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              SurahReaderScreen(surah: p.surah!, follow: true)),
                     ),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('سورة ${QuranData.name(p.surah!)}',
-                        style: TextStyle(color: scheme.onPrimary, fontWeight: FontWeight.w700)),
-                    Text(p.error ?? p.reciter?.name ?? '',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: scheme.onPrimary.withValues(alpha: 0.8), fontSize: 12)),
-                  ]),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('سورة ${QuranData.name(p.surah!)}',
+                              style: TextStyle(
+                                  color: scheme.onPrimary,
+                                  fontWeight: FontWeight.w700)),
+                          Text(p.error ?? p.reciter?.name ?? '',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color:
+                                      scheme.onPrimary.withValues(alpha: 0.8),
+                                  fontSize: 12)),
+                        ]),
                   ),
                 ),
                 IconButton(
                   tooltip: 'السابقة',
-                  icon: Icon(Icons.skip_previous_rounded, color: scheme.onPrimary, size: 34),
+                  icon: Icon(Icons.skip_previous_rounded,
+                      color: scheme.onPrimary, size: 34),
                   onPressed: p.previous,
                 ),
                 IconButton(
                   tooltip: 'التالية',
-                  icon: Icon(Icons.skip_next_rounded, color: scheme.onPrimary, size: 34),
+                  icon: Icon(Icons.skip_next_rounded,
+                      color: scheme.onPrimary, size: 34),
                   onPressed: p.next,
                 ),
               ]),

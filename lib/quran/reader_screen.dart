@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -32,9 +34,11 @@ class SurahListScreen extends StatelessWidget {
 
 class SurahReaderScreen extends StatefulWidget {
   final int surah;
+
   /// وضع المتابعة: يعلّم الآية الجاري تلاوتها بالأحمر ويتتبّعها بالتمرير مع مشغّل التلاوة.
   final bool follow;
-  const SurahReaderScreen({super.key, required this.surah, this.follow = false});
+  const SurahReaderScreen(
+      {super.key, required this.surah, this.follow = false});
 
   @override
   State<SurahReaderScreen> createState() => _SurahReaderScreenState();
@@ -45,6 +49,8 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   double _size = 26;
   final _scroll = ScrollController();
   final _keys = <int, GlobalKey>{};
+  StreamSubscription<Duration>? _posSub;
+  late int _s = widget.surah; // السورة المعروضة (تتبع المشغّل في وضع المتابعة)
   int _current = -1; // فهرس الآية الحالية (من 0)
   List<int>? _cum; // الأطوال التراكمية للنص لتقدير موضع التلاوة
   List<int>? _starts; // بدايات الآيات الحقيقية (ms) إن توفّرت
@@ -59,32 +65,57 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
       if (v != null && mounted) setState(() => _size = v);
     });
     if (widget.follow) {
-      final n = QuranData.verseCount(widget.surah);
-      // البسملة تُتلى قبل أول آية في كل سورة عدا الفاتحة (هي آيتها الأولى) والتوبة.
-      _introWeight = (widget.surah == 1 || widget.surah == 9) ? 0 : 45;
-      var acc = _introWeight;
-      _cum = [
-        // وزن كل آية = حروفها + وقفة قصيرة بين الآيات.
-        for (var i = 1; i <= n; i++) acc += QuranData.verse(widget.surah, i).length + 6,
-      ];
+      _initWeights();
       QuranPlayer.instance.addListener(_onPlayer);
-      QuranPlayer.instance.position.listen(_onPosition);
+      _posSub = QuranPlayer.instance.position.listen(_onPosition);
     }
   }
 
+  void _initWeights() {
+    final n = QuranData.verseCount(_s);
+    // البسملة تُتلى قبل أول آية في كل سورة عدا الفاتحة (هي آيتها الأولى) والتوبة.
+    _introWeight = (_s == 1 || _s == 9) ? 0 : 45;
+    var acc = _introWeight;
+    _cum = [
+      // وزن كل آية = حروفها + وقفة قصيرة بين الآيات.
+      for (var i = 1; i <= n; i++) acc += QuranData.verse(_s, i).length + 6,
+    ];
+  }
+
   void _onPlayer() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    final cur = QuranPlayer.instance.surah;
+    if (cur != null && cur != _s) {
+      // انتقل المشغّل لسورة أخرى: نعرض نصّها ونتابعها.
+      setState(() {
+        _s = cur;
+        _current = -1;
+        _starts = null;
+        _timingsAsked = false;
+        _keys.clear();
+        _initWeights();
+      });
+      if (_scroll.hasClients) _scroll.jumpTo(0);
+    } else {
+      setState(() {});
+    }
   }
 
   /// الآية الحالية: بالتوقيت الحقيقي إن توفّر، وإلا بتقدير نسبة الوقت إلى طول النص.
   void _onPosition(Duration pos) {
     final p = QuranPlayer.instance;
     final dur = p.duration;
-    if (!mounted || p.surah != widget.surah || dur == null || dur.inMilliseconds == 0 || _cum == null) return;
+    if (!mounted ||
+        p.surah != _s ||
+        dur == null ||
+        dur.inMilliseconds == 0 ||
+        _cum == null) return;
     if (!_timingsAsked && p.reciter != null) {
       _timingsAsked = true;
-      VerseTimings.load(p.reciter!, widget.surah, dur).then((t) {
-        if (mounted) _starts = t;
+      final asked = _s;
+      VerseTimings.load(p.reciter!, asked, dur).then((t) {
+        if (mounted && _s == asked)
+          _starts = t; // تجاهل النتيجة إن انتقلنا لسورة أخرى
       });
     }
     final frac = (pos.inMilliseconds / dur.inMilliseconds).clamp(0.0, 1.0);
@@ -110,10 +141,12 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   void _reveal(int idx, double frac) {
     final ctx = _keys[idx]?.currentContext;
     if (ctx != null) {
-      Scrollable.ensureVisible(ctx, alignment: 0.25, duration: const Duration(milliseconds: 400));
+      Scrollable.ensureVisible(ctx,
+          alignment: 0.25, duration: const Duration(milliseconds: 400));
     } else if (_scroll.hasClients) {
       // الآية غير مبنية بعد: اقفز لموضع تقريبي ثم ثبّتها.
-      _scroll.jumpTo((frac * _scroll.position.maxScrollExtent).clamp(0.0, _scroll.position.maxScrollExtent));
+      _scroll.jumpTo((frac * _scroll.position.maxScrollExtent)
+          .clamp(0.0, _scroll.position.maxScrollExtent));
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final c = _keys[idx]?.currentContext;
         if (c != null) Scrollable.ensureVisible(c, alignment: 0.25);
@@ -123,6 +156,7 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
 
   @override
   void dispose() {
+    _posSub?.cancel();
     if (widget.follow) QuranPlayer.instance.removeListener(_onPlayer);
     _scroll.dispose();
     super.dispose();
@@ -135,14 +169,18 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final s = widget.surah;
+    final s = _s;
     final count = QuranData.verseCount(s);
     return Scaffold(
       appBar: AppBar(
         title: Text(QuranData.name(s)),
         actions: [
-          IconButton(icon: const Icon(Icons.text_decrease), onPressed: () => _setSize(_size - 2)),
-          IconButton(icon: const Icon(Icons.text_increase), onPressed: () => _setSize(_size + 2)),
+          IconButton(
+              icon: const Icon(Icons.text_decrease),
+              onPressed: () => _setSize(_size - 2)),
+          IconButton(
+              icon: const Icon(Icons.text_increase),
+              onPressed: () => _setSize(_size + 2)),
         ],
       ),
       // ListView.builder يبني الآيات الظاهرة فقط، فيبقى خفيفًا على الهواتف.
@@ -154,7 +192,9 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
         itemBuilder: (context, i) {
           final v = i + 1;
           final active = widget.follow && i == _current;
-          final red = Theme.of(context).brightness == Brightness.dark ? const Color(0xFFFF6B6B) : const Color(0xFFD32F2F);
+          final red = Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFFFF6B6B)
+              : const Color(0xFFD32F2F);
           return Padding(
             key: widget.follow ? (_keys[i] ??= GlobalKey()) : null,
             padding: const EdgeInsets.symmetric(vertical: 6),

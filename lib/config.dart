@@ -1,5 +1,7 @@
 /// إعدادات المسجد. عدّل القيم هنا فقط.
 class MosqueConfig {
+  static const facebookUrl = 'https://www.facebook.com/kansafra.mosque/';
+
   /// كتالوج الأذان الأونلاين (catalog.json والمقاطع) المنشور من مجلد docs/adhan في المستودع.
   static const adhanCatalogBase =
       'https://raw.githubusercontent.com/mohamedal2min-u/kansafra-mosque-app/main/docs/adhan';
@@ -42,8 +44,16 @@ class MosqueConfig {
       details: '1dff3aa4e6d84e983b48c4f8ad6480b8',
       holder: 'توفيق أبو محمد',
     ),
-    DonationMethod(title: 'بطاقات الدفع', badge: '', color: 0xFF1A3C6E, logo: 'assets/pay/cards.png'),
-    DonationMethod(title: 'PayPal', badge: '', color: 0xFF0070BA, logo: 'assets/pay/paypal.png'),
+    DonationMethod(
+        title: 'بطاقات الدفع',
+        badge: '',
+        color: 0xFF1A3C6E,
+        logo: 'assets/pay/cards.png'),
+    DonationMethod(
+        title: 'PayPal',
+        badge: '',
+        color: 0xFF0070BA,
+        logo: 'assets/pay/paypal.png'),
   ];
 }
 

@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 
 import '../account/identity.dart';
 import '../config.dart';
+import '../launcher.dart';
 
 /// صفحة المساعدة والدعم: تعريف سريع ونموذج يصل إلى ورقة «الدعم» في جدول Google.
 class SupportScreen extends StatefulWidget {
@@ -32,7 +33,10 @@ class _SupportScreenState extends State<SupportScreen> {
   }
 
   Future<void> _send() async {
-    setState(() { _busy = true; _error = null; });
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
       final uri = Uri.parse(MosqueConfig.donorsUrl).replace(queryParameters: {
         'action': 'support',
@@ -48,24 +52,57 @@ class _SupportScreenState extends State<SupportScreen> {
         throw Exception('not saved');
       }
       if (mounted) {
-        setState(() { _sent = true; _busy = false; });
-        _name.clear(); _phone.clear(); _message.clear();
+        setState(() {
+          _sent = true;
+          _busy = false;
+        });
+        _name.clear();
+        _phone.clear();
+        _message.clear();
       }
     } catch (_) {
-      if (mounted) setState(() { _busy = false; _error = 'تعذّر الإرسال. تحقّق من الإنترنت وأعد المحاولة.'; });
+      if (mounted)
+        setState(() {
+          _busy = false;
+          _error = 'تعذّر الإرسال. تحقّق من الإنترنت وأعد المحاولة.';
+        });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final canSend = _name.text.trim().isNotEmpty && _message.text.trim().isNotEmpty && !_busy;
+    final canSend = _name.text.trim().isNotEmpty &&
+        _message.text.trim().isNotEmpty &&
+        !_busy;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(MosqueConfig.name, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge),
+        Text(MosqueConfig.name,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 4),
-        Text('المساعدة والدعم', textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium),
+        Text('المساعدة والدعم',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 16),
+        if (Launcher.supported)
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.facebook,
+                  color: Color(0xFF1877F2), size: 36),
+              title: const Text('تابعنا على فيسبوك'),
+              subtitle: const Text('أخبار المسجد ومواعيده'),
+              trailing: const Icon(Icons.open_in_new_rounded),
+              onTap: () async {
+                final ok = await Launcher.openUrl(MosqueConfig.facebookUrl);
+                if (!ok && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('تعذّر فتح الرابط.')));
+                }
+              },
+            ),
+          ),
+        if (Launcher.supported) const SizedBox(height: 8),
         const Card(
           child: Padding(
             padding: EdgeInsets.all(12),
@@ -79,7 +116,9 @@ class _SupportScreenState extends State<SupportScreen> {
         TextField(
           controller: _name,
           decoration: const InputDecoration(labelText: 'الاسم'),
-          onChanged: (_) => setState(() { _sent = false; }),
+          onChanged: (_) => setState(() {
+            _sent = false;
+          }),
         ),
         const SizedBox(height: 12),
         TextField(
@@ -90,7 +129,9 @@ class _SupportScreenState extends State<SupportScreen> {
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
           initialValue: _type,
-          items: [for (final t in _types) DropdownMenuItem(value: t, child: Text(t))],
+          items: [
+            for (final t in _types) DropdownMenuItem(value: t, child: Text(t))
+          ],
           onChanged: (v) => setState(() => _type = v!),
           decoration: const InputDecoration(labelText: 'نوع الرسالة'),
         ),
@@ -100,20 +141,25 @@ class _SupportScreenState extends State<SupportScreen> {
           maxLines: 5,
           maxLength: 500,
           decoration: const InputDecoration(labelText: 'رسالتك'),
-          onChanged: (_) => setState(() { _sent = false; }),
+          onChanged: (_) => setState(() {
+            _sent = false;
+          }),
         ),
         if (_error != null)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            child: Text(_error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ),
         if (_sent)
           const Padding(
             padding: EdgeInsets.only(top: 8),
-            child: Text('وصلت رسالتك، جزاك الله خيرًا. تجد الرد في «حسابي» (الأيقونة أعلى الشاشة).'),
+            child: Text(
+                'وصلت رسالتك، جزاك الله خيرًا. تجد الرد في «حسابي» (الأيقونة أعلى الشاشة).'),
           ),
         const SizedBox(height: 12),
-        FilledButton(onPressed: canSend ? _send : null, child: const Text('إرسال')),
+        FilledButton(
+            onPressed: canSend ? _send : null, child: const Text('إرسال')),
       ],
     );
   }

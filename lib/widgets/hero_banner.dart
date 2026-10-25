@@ -32,7 +32,8 @@ class _HeroBannerState extends State<HeroBanner> with WidgetsBindingObserver {
     _timer = Timer.periodic(const Duration(seconds: 6), (_) {
       if (!_controller.hasClients) return;
       final next = (_page + 1) % mosquePhotos.length;
-      _controller.animateToPage(next, duration: const Duration(milliseconds: 600), curve: Curves.easeInOut);
+      _controller.animateToPage(next,
+          duration: const Duration(milliseconds: 600), curve: Curves.easeInOut);
     });
   }
 
@@ -71,7 +72,8 @@ class _HeroBannerState extends State<HeroBanner> with WidgetsBindingObserver {
                   p,
                   fit: BoxFit.cover,
                   cacheWidth: 1000, // يقلّل استهلاك الذاكرة على الهواتف الضعيفة
-                  errorBuilder: (_, __, ___) => Container(color: scheme.primary),
+                  errorBuilder: (_, __, ___) =>
+                      Container(color: scheme.primary),
                 ),
             ],
           ),
@@ -92,13 +94,17 @@ class _HeroBannerState extends State<HeroBanner> with WidgetsBindingObserver {
             child: Row(children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.asset('assets/logo/logo_192.png', width: 44, height: 44, cacheWidth: 96),
+                child: Image.asset('assets/logo/logo_192.png',
+                    width: 44, height: 44, cacheWidth: 96),
               ),
               const SizedBox(width: 10),
               const Expanded(
                 child: Text(
                   MosqueConfig.name,
-                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               Row(children: [

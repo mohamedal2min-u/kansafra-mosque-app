@@ -18,12 +18,17 @@ import 'screens/prayer_times_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // التنبيهات مدعومة على أندرويد وآيفون فقط؛ على الويب/الكمبيوتر نعرض الواجهة فقط.
-  if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+  if (!kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS)) {
     // بعد أول إطار حتى لا يؤخّر طلب الأذونات فتح التطبيق.
-    WidgetsBinding.instance.addPostFrameCallback((_) => AdhanService.instance.init());
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => AdhanService.instance.init());
   }
   // تشغيل القرآن في الخلفية بخدمة مقدّمة (إشعار تحكم) حتى لا يوقفه النظام.
-  if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+  if (!kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS)) {
     await JustAudioBackground.init(
       androidNotificationChannelId: 'org.kansafra.kansafra_mosque.audio',
       androidNotificationChannelName: 'تشغيل القرآن',
@@ -45,7 +50,8 @@ ThemeData _theme(Brightness b) {
     primary: dark ? const Color(0xFF7CD3A6) : kGreen,
     onPrimary: dark ? const Color(0xFF06271A) : Colors.white,
     primaryContainer: dark ? const Color(0xFF1C4A33) : const Color(0xFFD9ECE0),
-    onPrimaryContainer: dark ? const Color(0xFFD9ECE0) : const Color(0xFF0A3B25),
+    onPrimaryContainer:
+        dark ? const Color(0xFFD9ECE0) : const Color(0xFF0A3B25),
     tertiary: dark ? const Color(0xFFE2B957) : kGold,
     surface: dark ? const Color(0xFF0E1A14) : const Color(0xFFF7F3E8),
     onSurface: dark ? const Color(0xFFE8EFEA) : const Color(0xFF1B2A22),
@@ -60,7 +66,11 @@ ThemeData _theme(Brightness b) {
       centerTitle: true,
       backgroundColor: scheme.surface,
       surfaceTintColor: Colors.transparent,
-      titleTextStyle: TextStyle(fontFamily: 'Tajawal', color: scheme.primary, fontSize: 20, fontWeight: FontWeight.w700),
+      titleTextStyle: TextStyle(
+          fontFamily: 'Tajawal',
+          color: scheme.primary,
+          fontSize: 20,
+          fontWeight: FontWeight.w700),
     ),
     cardTheme: CardThemeData(
       elevation: 0,
@@ -71,7 +81,8 @@ ThemeData _theme(Brightness b) {
         side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
       ),
     ),
-    listTileTheme: const ListTileThemeData(contentPadding: EdgeInsets.symmetric(horizontal: 16)),
+    listTileTheme: const ListTileThemeData(
+        contentPadding: EdgeInsets.symmetric(horizontal: 16)),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: scheme.surfaceContainerHighest,
@@ -80,11 +91,14 @@ ThemeData _theme(Brightness b) {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         minimumSize: const Size.fromHeight(52),
-        textStyle: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 16),
+        textStyle: const TextStyle(
+            fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     ),
-    bottomAppBarTheme: BottomAppBarThemeData(color: scheme.surfaceContainerHighest, surfaceTintColor: Colors.transparent),
+    bottomAppBarTheme: BottomAppBarThemeData(
+        color: scheme.surfaceContainerHighest,
+        surfaceTintColor: Colors.transparent),
   );
 }
 
@@ -96,20 +110,20 @@ class MosqueApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemeController.mode,
       builder: (context, mode, _) => MaterialApp(
-      themeMode: mode,
-      title: MosqueConfig.name,
-      debugShowCheckedModeBanner: false,
-      locale: const Locale('ar'),
-      supportedLocales: const [Locale('ar')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      theme: _theme(Brightness.light),
-      darkTheme: _theme(Brightness.dark),
-      home: const HomeShell(),
-    ),
+        themeMode: mode,
+        title: MosqueConfig.name,
+        debugShowCheckedModeBanner: false,
+        locale: const Locale('ar'),
+        supportedLocales: const [Locale('ar')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        theme: _theme(Brightness.light),
+        darkTheme: _theme(Brightness.dark),
+        home: const HomeShell(),
+      ),
     );
   }
 }
@@ -125,7 +139,13 @@ class _HomeShellState extends State<HomeShell> {
   // 0 الأذان، 1 القرآن، 2 التبرعات (الزر الأوسط البارز)، 3 الدعم، 4 الإعدادات
   int _index = 0;
   final _visited = <int>{0};
-  static const _pages = [PrayerTimesScreen(), QuranHome(), DonationsScreen(), SupportScreen(), SettingsScreen()];
+  static const _pages = [
+    PrayerTimesScreen(),
+    QuranHome(),
+    DonationsScreen(),
+    SupportScreen(),
+    SettingsScreen()
+  ];
   static const _donate = 2;
 
   Widget _item(int i, IconData icon, String label) {
@@ -134,7 +154,10 @@ class _HomeShellState extends State<HomeShell> {
     final color = selected ? scheme.primary : scheme.onSurfaceVariant;
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() { _index = i; _visited.add(i); }),
+        onTap: () => setState(() {
+          _index = i;
+          _visited.add(i);
+        }),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -148,7 +171,11 @@ class _HomeShellState extends State<HomeShell> {
               child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(height: 2),
-            Text(label, style: TextStyle(fontSize: 11.5, color: color, fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 11.5,
+                    color: color,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
           ]),
         ),
       ),
@@ -163,16 +190,21 @@ class _HomeShellState extends State<HomeShell> {
       appBar: AppBar(
         title: const Text(MosqueConfig.name),
         leading: IconButton(
-            icon: Icon(Theme.of(context).brightness == Brightness.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-            tooltip: 'فاتح / داكن',
-            onPressed: () => ThemeController.set(
-                Theme.of(context).brightness == Brightness.dark ? ThemeMode.light : ThemeMode.dark),
-          ),
+          icon: Icon(Theme.of(context).brightness == Brightness.dark
+              ? Icons.light_mode_rounded
+              : Icons.dark_mode_rounded),
+          tooltip: 'فاتح / داكن',
+          onPressed: () => ThemeController.set(
+              Theme.of(context).brightness == Brightness.dark
+                  ? ThemeMode.light
+                  : ThemeMode.dark),
+        ),
         actions: [
           IconButton(
             icon: const _AccountAvatar(),
             tooltip: 'حسابي',
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccountScreen())),
+            onPressed: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const AccountScreen())),
           ),
         ],
       ),
@@ -182,7 +214,8 @@ class _HomeShellState extends State<HomeShell> {
           child: IndexedStack(
             index: _index,
             children: [
-              for (var i = 0; i < _pages.length; i++) _visited.contains(i) ? _pages[i] : const SizedBox.shrink(),
+              for (var i = 0; i < _pages.length; i++)
+                _visited.contains(i) ? _pages[i] : const SizedBox.shrink(),
             ],
           ),
         ),
@@ -198,7 +231,10 @@ class _HomeShellState extends State<HomeShell> {
           backgroundColor: scheme.tertiary,
           foregroundColor: Colors.white,
           tooltip: 'التبرعات',
-          onPressed: () => setState(() { _index = _donate; _visited.add(_donate); }),
+          onPressed: () => setState(() {
+            _index = _donate;
+            _visited.add(_donate);
+          }),
           child: const Icon(Icons.volunteer_activism_rounded, size: 34),
         ),
       ),
@@ -211,22 +247,27 @@ class _HomeShellState extends State<HomeShell> {
         child: Directionality(
           textDirection: TextDirection.ltr,
           child: Row(children: [
-          _item(0, Icons.access_time_filled_rounded, 'الأذان'),
-          _item(1, Icons.menu_book_rounded, 'القرآن'),
-          // مكان الزر الأوسط
-          SizedBox(
-            width: 84,
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text('التبرعات',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: donating ? scheme.primary : scheme.onSurfaceVariant)),
+            _item(0, Icons.access_time_filled_rounded, 'الأذان'),
+            _item(1, Icons.menu_book_rounded, 'القرآن'),
+            // مكان الزر الأوسط
+            SizedBox(
+              width: 84,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text('التبرعات',
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: donating
+                              ? scheme.primary
+                              : scheme.onSurfaceVariant)),
+                ),
               ),
             ),
-          ),
-          _item(3, Icons.support_agent_rounded, 'الدعم'),
-          _item(4, Icons.settings_rounded, 'الإعدادات'),
+            _item(3, Icons.support_agent_rounded, 'الدعم'),
+            _item(4, Icons.settings_rounded, 'الإعدادات'),
           ]),
         ),
       ),

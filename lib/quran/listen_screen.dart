@@ -35,7 +35,9 @@ class _ListenScreenState extends State<ListenScreen> {
       if (mounted) {
         setState(() {
           _lastId = p.getInt(kLastReciterId);
-          _favs = (p.getStringList(kFavReciters) ?? const []).map(int.parse).toSet();
+          _favs = (p.getStringList(kFavReciters) ?? const [])
+              .map(int.parse)
+              .toSet();
         });
       }
     });
@@ -43,7 +45,8 @@ class _ListenScreenState extends State<ListenScreen> {
 
   Future<void> _toggleFav(Reciter r) async {
     setState(() => _favs.contains(r.id) ? _favs.remove(r.id) : _favs.add(r.id));
-    (await SharedPreferences.getInstance()).setStringList(kFavReciters, _favs.map((e) => '$e').toList());
+    (await SharedPreferences.getInstance())
+        .setStringList(kFavReciters, _favs.map((e) => '$e').toList());
   }
 
   Future<void> _open(Reciter r) async {
@@ -51,7 +54,8 @@ class _ListenScreenState extends State<ListenScreen> {
     await p.setInt(kLastReciterId, r.id);
     if (!mounted) return;
     setState(() => _lastId = r.id);
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ReciterScreen(reciter: r)));
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => ReciterScreen(reciter: r)));
   }
 
   @override
@@ -65,11 +69,15 @@ class _ListenScreenState extends State<ListenScreen> {
         if (snap.hasError) {
           return Center(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Text('تعذّر تحميل قائمة القرّاء.\nالقراءة تعمل بدون إنترنت.', textAlign: TextAlign.center),
+              const Text(
+                  'تعذّر تحميل قائمة القرّاء.\nالقراءة تعمل بدون إنترنت.',
+                  textAlign: TextAlign.center),
               if (ReciterApi.lastError != null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-                  child: SelectableText(ReciterApi.lastError!, textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 11)),
+                  child: SelectableText(ReciterApi.lastError!,
+                      textDirection: TextDirection.ltr,
+                      style: const TextStyle(fontSize: 11)),
                 ),
               const SizedBox(height: 12),
               FilledButton(
@@ -88,7 +96,8 @@ class _ListenScreenState extends State<ListenScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: TextField(
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'ابحث عن قارئ'),
+              decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search), hintText: 'ابحث عن قارئ'),
               onChanged: (v) => setState(() => _query = v.trim()),
             ),
           ),
@@ -115,9 +124,12 @@ class _ListenScreenState extends State<ListenScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                   child: FilterChip(
-                    avatar: Icon(Icons.star_rounded, size: 18, color: Theme.of(context).colorScheme.tertiary),
+                    avatar: Icon(Icons.star_rounded,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.tertiary),
                     label: const Text('المفضلة'),
                     selected: _onlyFav,
                     onSelected: (v) => setState(() {
@@ -128,7 +140,8 @@ class _ListenScreenState extends State<ListenScreen> {
                 ),
                 for (final t in ReciterTag.values)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                     child: ChoiceChip(
                       label: Text(t.label),
                       selected: !_onlyFav && _tag == t,
@@ -155,21 +168,25 @@ class _ListenScreenState extends State<ListenScreen> {
                     ),
                   )
                 : ListView.builder(
-              itemCount: list.length,
-              itemBuilder: (context, i) => ListTile(
-                title: Text(list[i].name),
-                subtitle: Text('${list[i].moshafs.length} رواية/تلاوة'),
-                trailing: IconButton(
-                  tooltip: 'مفضلة',
-                  icon: Icon(
-                    _favs.contains(list[i].id) ? Icons.star_rounded : Icons.star_border_rounded,
-                    color: _favs.contains(list[i].id) ? Theme.of(context).colorScheme.tertiary : null,
+                    itemCount: list.length,
+                    itemBuilder: (context, i) => ListTile(
+                      title: Text(list[i].name),
+                      subtitle: Text('${list[i].moshafs.length} رواية/تلاوة'),
+                      trailing: IconButton(
+                        tooltip: 'مفضلة',
+                        icon: Icon(
+                          _favs.contains(list[i].id)
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          color: _favs.contains(list[i].id)
+                              ? Theme.of(context).colorScheme.tertiary
+                              : null,
+                        ),
+                        onPressed: () => _toggleFav(list[i]),
+                      ),
+                      onTap: () => _open(list[i]),
+                    ),
                   ),
-                  onPressed: () => _toggleFav(list[i]),
-                ),
-                onTap: () => _open(list[i]),
-              ),
-            ),
           ),
         ]);
       },
@@ -212,7 +229,8 @@ class _ReciterScreenState extends State<ReciterScreen> {
     QuranDownloader.instance.addListener(_onDownload);
     SharedPreferences.getInstance().then((p) {
       final saved = p.getString('$kLastMoshaf:${widget.reciter.id}');
-      final m = widget.reciter.moshafs.where((e) => e.name == saved).firstOrNull;
+      final m =
+          widget.reciter.moshafs.where((e) => e.name == saved).firstOrNull;
       if (m != null && mounted) setState(() => _moshaf = m);
       _refreshSaved();
     });
@@ -232,15 +250,21 @@ class _ReciterScreenState extends State<ReciterScreen> {
     }
   }
 
-  bool get _isPinnedHere => _pinned != null && _pinned!['id'] == widget.reciter.id && _pinned!['m'] == _moshaf.name;
+  bool get _isPinnedHere =>
+      _pinned != null &&
+      _pinned!['id'] == widget.reciter.id &&
+      _pinned!['m'] == _moshaf.name;
 
-  static String _fmt(int b) =>
-      b < 1024 * 1024 * 1024 ? '${(b / 1024 / 1024).round()} م.ب' : '${(b / 1024 / 1024 / 1024).toStringAsFixed(1)} غ.ب';
+  static String _fmt(int b) => b < 1024 * 1024 * 1024
+      ? '${(b / 1024 / 1024).round()} م.ب'
+      : '${(b / 1024 / 1024 / 1024).toStringAsFixed(1)} غ.ب';
 
   Future<void> _startDownload() async {
     final msg = ScaffoldMessenger.of(context);
     if (!await QuranDownloader.onWifi()) {
-      msg.showSnackBar(const SnackBar(content: Text('التحميل متاح على Wi-Fi فقط. اتصل بشبكة Wi-Fi ثم أعد المحاولة.')));
+      msg.showSnackBar(const SnackBar(
+          content: Text(
+              'التحميل متاح على Wi-Fi فقط. اتصل بشبكة Wi-Fi ثم أعد المحاولة.')));
       return;
     }
     if (!mounted) return;
@@ -250,26 +274,37 @@ class _ReciterScreenState extends State<ReciterScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('تحميل المصحف للاستماع بدون إنترنت'),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('${widget.reciter.name}\n${_moshaf.name}'),
-          const SizedBox(height: 8),
-          Text('عدد السور: ${_moshaf.surahs.length}'),
-          FutureBuilder<int?>(
-            future: size,
-            builder: (_, snap) => Text(snap.connectionState != ConnectionState.done
-                ? 'الحجم التقريبي: جارٍ الحساب...'
-                : snap.data == null
-                    ? 'الحجم التقريبي: غير معروف (قد يبلغ مئات الميغابايت)'
-                    : 'الحجم التقريبي: ${_fmt(snap.data!)}'),
-          ),
-          const SizedBox(height: 8),
-          const Text('• يعمل على Wi-Fi فقط، ويتوقف إن انقطع ويمكنك المتابعة.'),
-          const Text('• قارئ واحد فقط على الهاتف.'),
-          if (replacing) Text('• سيُحذف المحمَّل سابقًا (${_pinned!['name']}).', style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
-        ]),
+        content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${widget.reciter.name}\n${_moshaf.name}'),
+              const SizedBox(height: 8),
+              Text('عدد السور: ${_moshaf.surahs.length}'),
+              FutureBuilder<int?>(
+                future: size,
+                builder: (_, snap) => Text(snap.connectionState !=
+                        ConnectionState.done
+                    ? 'الحجم التقريبي: جارٍ الحساب...'
+                    : snap.data == null
+                        ? 'الحجم التقريبي: غير معروف (قد يبلغ مئات الميغابايت)'
+                        : 'الحجم التقريبي: ${_fmt(snap.data!)}'),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                  '• يعمل على Wi-Fi فقط، ويتوقف إن انقطع ويمكنك المتابعة.'),
+              const Text('• قارئ واحد فقط على الهاتف.'),
+              if (replacing)
+                Text('• سيُحذف المحمَّل سابقًا (${_pinned!['name']}).',
+                    style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
+            ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('تحميل')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('إلغاء')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('تحميل')),
         ],
       ),
     );
@@ -281,24 +316,29 @@ class _ReciterScreenState extends State<ReciterScreen> {
   Widget _downloadCard(BuildContext context) {
     final d = QuranDownloader.instance;
     final cs = Theme.of(context).colorScheme;
-    final here = d.reciter?.id == widget.reciter.id && d.moshaf?.name == _moshaf.name;
-    final complete = _saved.length >= _moshaf.surahs.length && _moshaf.surahs.isNotEmpty;
+    final here =
+        d.reciter?.id == widget.reciter.id && d.moshaf?.name == _moshaf.name;
+    final complete =
+        _saved.length >= _moshaf.surahs.length && _moshaf.surahs.isNotEmpty;
     Widget body;
     if (d.running) {
       body = here
           ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Expanded(child: Text('جارٍ التحميل: ${d.done} / ${d.total} سورة')),
+                Expanded(
+                    child: Text('جارٍ التحميل: ${d.done} / ${d.total} سورة')),
                 TextButton(onPressed: d.pause, child: const Text('إيقاف مؤقت')),
               ]),
-              LinearProgressIndicator(value: d.total == 0 ? null : d.done / d.total),
+              LinearProgressIndicator(
+                  value: d.total == 0 ? null : d.done / d.total),
             ])
           : const Text('يجري تحميل مصحف قارئ آخر...');
     } else if (complete && _isPinnedHere) {
       body = Row(children: [
         Icon(Icons.download_done_rounded, color: cs.primary),
         const SizedBox(width: 8),
-        const Expanded(child: Text('مصحف هذا القارئ محفوظ على الهاتف (يعمل بدون إنترنت)')),
+        const Expanded(
+            child: Text('مصحف هذا القارئ محفوظ على الهاتف (يعمل بدون إنترنت)')),
         TextButton(
           onPressed: () async {
             await d.deleteAll();
@@ -310,22 +350,31 @@ class _ReciterScreenState extends State<ReciterScreen> {
     } else {
       final partial = _isPinnedHere && _saved.isNotEmpty;
       body = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        if (d.error != null && partial) Padding(padding: const EdgeInsets.only(bottom: 6), child: Text(d.error!, style: TextStyle(color: cs.error))),
+        if (d.error != null && partial)
+          Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(d.error!, style: TextStyle(color: cs.error))),
         if (_listenSecs >= kRegularListenSeconds && !partial)
           const Padding(
             padding: EdgeInsets.only(bottom: 6),
-            child: Text('استمعتَ لهذا القارئ أكثر من ساعة، يمكنك تحميله كاملًا.'),
+            child:
+                Text('استمعتَ لهذا القارئ أكثر من ساعة، يمكنك تحميله كاملًا.'),
           ),
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            icon: Icon(partial ? Icons.play_arrow_rounded : Icons.download_rounded),
-            label: Text(partial ? 'متابعة التحميل (${_saved.length} / ${_moshaf.surahs.length})' : 'تحميل مصحف هذا القارئ (Wi-Fi فقط)'),
+            icon: Icon(
+                partial ? Icons.play_arrow_rounded : Icons.download_rounded),
+            label: Text(partial
+                ? 'متابعة التحميل (${_saved.length} / ${_moshaf.surahs.length})'
+                : 'تحميل مصحف هذا القارئ (Wi-Fi فقط)'),
             onPressed: partial
                 ? () async {
                     if (!await QuranDownloader.onWifi()) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('التحميل متاح على Wi-Fi فقط.')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('التحميل متاح على Wi-Fi فقط.')));
                       }
                       return;
                     }
@@ -343,7 +392,8 @@ class _ReciterScreenState extends State<ReciterScreen> {
   }
 
   Future<void> _saveMoshaf(Moshaf m) async =>
-      (await SharedPreferences.getInstance()).setString('$kLastMoshaf:${widget.reciter.id}', m.name);
+      (await SharedPreferences.getInstance())
+          .setString('$kLastMoshaf:${widget.reciter.id}', m.name);
 
   @override
   Widget build(BuildContext context) {
@@ -359,12 +409,21 @@ class _ReciterScreenState extends State<ReciterScreen> {
               initialValue: _moshaf,
               items: [
                 for (final m in widget.reciter.moshafs)
-                  DropdownMenuItem(value: m, child: Text(m.name, overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(
+                      value: m,
+                      child: Text(m.name, overflow: TextOverflow.ellipsis)),
               ],
-              onChanged: (m) { setState(() => _moshaf = m!); _saveMoshaf(m!); _refreshSaved(); },
+              onChanged: (m) {
+                setState(() => _moshaf = m!);
+                _saveMoshaf(m!);
+                _refreshSaved();
+              },
             ),
           ),
-        if (AudioStore.supported) ListenableBuilder(listenable: QuranDownloader.instance, builder: (context, _) => _downloadCard(context)),
+        if (AudioStore.supported)
+          ListenableBuilder(
+              listenable: QuranDownloader.instance,
+              builder: (context, _) => _downloadCard(context)),
         Expanded(
           child: ListenableBuilder(
             listenable: player,
@@ -376,15 +435,24 @@ class _ReciterScreenState extends State<ReciterScreen> {
                 return ListTile(
                   leading: CircleAvatar(child: Text('$s')),
                   title: Text(QuranData.name(s)),
-                  subtitle: _saved.contains(s) ? const Text('محفوظة على الهاتف (تعمل بدون إنترنت)') : null,
+                  subtitle: _saved.contains(s)
+                      ? const Text('محفوظة على الهاتف (تعمل بدون إنترنت)')
+                      : null,
                   trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                    if (_saved.contains(s)) Icon(Icons.download_done_rounded, color: Theme.of(context).colorScheme.primary),
+                    if (_saved.contains(s))
+                      Icon(Icons.download_done_rounded,
+                          color: Theme.of(context).colorScheme.primary),
                     // زر التشغيل: صوت فقط بدون فتح النص.
                     IconButton(
                       iconSize: 40,
-                      tooltip: current && player.playing ? 'إيقاف مؤقت' : 'تشغيل',
-                      icon: Icon(current && player.playing ? Icons.pause_circle : Icons.play_circle),
-                      onPressed: () => current ? player.toggle() : player.play(widget.reciter, _moshaf, s),
+                      tooltip:
+                          current && player.playing ? 'إيقاف مؤقت' : 'تشغيل',
+                      icon: Icon(current && player.playing
+                          ? Icons.pause_circle
+                          : Icons.play_circle),
+                      onPressed: () => current
+                          ? player.toggle()
+                          : player.play(widget.reciter, _moshaf, s),
                     ),
                   ]),
                   selected: current,
@@ -393,7 +461,9 @@ class _ReciterScreenState extends State<ReciterScreen> {
                     if (!current) await player.play(widget.reciter, _moshaf, s);
                     if (!context.mounted) return;
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => SurahReaderScreen(surah: s, follow: true)),
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              SurahReaderScreen(surah: s, follow: true)),
                     );
                   },
                 );
@@ -423,33 +493,45 @@ class PlayerBar extends StatelessWidget {
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text('${QuranData.name(p.surah!)} - ${p.reciter!.name}',
-                  overflow: TextOverflow.ellipsis),
-              if (p.error != null) Text(p.error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-              StreamBuilder<Duration>(
-                stream: p.position,
-                builder: (context, s) {
-                  final total = p.duration?.inSeconds.toDouble() ?? 0;
-                  final pos = (s.data?.inSeconds.toDouble() ?? 0).clamp(0, total > 0 ? total : 1).toDouble();
-                  return Slider(
-                    value: total > 0 ? pos : 0,
-                    max: total > 0 ? total : 1,
-                    onChanged: (v) => p.seek(Duration(seconds: v.toInt())),
-                  );
-                },
-              ),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                IconButton(iconSize: 38, icon: const Icon(Icons.skip_next), onPressed: p.next),
-                IconButton(
-                  iconSize: 68,
-                  icon: Icon(p.playing ? Icons.pause_circle : Icons.play_circle),
-                  onPressed: p.toggle,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Text('${QuranData.name(p.surah!)} - ${p.reciter!.name}',
+                    overflow: TextOverflow.ellipsis),
+                if (p.error != null)
+                  Text(p.error!,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error)),
+                StreamBuilder<Duration>(
+                  stream: p.position,
+                  builder: (context, s) {
+                    final total = p.duration?.inSeconds.toDouble() ?? 0;
+                    final pos = (s.data?.inSeconds.toDouble() ?? 0)
+                        .clamp(0, total > 0 ? total : 1)
+                        .toDouble();
+                    return Slider(
+                      value: total > 0 ? pos : 0,
+                      max: total > 0 ? total : 1,
+                      onChanged: (v) => p.seek(Duration(seconds: v.toInt())),
+                    );
+                  },
                 ),
-                IconButton(iconSize: 38, icon: const Icon(Icons.skip_previous), onPressed: p.previous),
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  IconButton(
+                      iconSize: 38,
+                      icon: const Icon(Icons.skip_next),
+                      onPressed: p.next),
+                  IconButton(
+                    iconSize: 68,
+                    icon: Icon(
+                        p.playing ? Icons.pause_circle : Icons.play_circle),
+                    onPressed: p.toggle,
+                  ),
+                  IconButton(
+                      iconSize: 38,
+                      icon: const Icon(Icons.skip_previous),
+                      onPressed: p.previous),
+                ]),
               ]),
-            ]),
-          ),
+            ),
           ),
         );
       },

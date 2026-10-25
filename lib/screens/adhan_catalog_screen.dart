@@ -51,7 +51,12 @@ class _AdhanCatalogScreenState extends State<AdhanCatalogScreen> {
     try {
       final f = await AdhanCatalog.file(v);
       final local = _downloaded.contains(v.id) && await f.exists();
-      await p.preview(v.id, v.name, (tag) => local ? AudioSource.file(f.path, tag: tag) : AudioSource.uri(Uri.parse(v.url), tag: tag));
+      await p.preview(
+          v.id,
+          v.name,
+          (tag) => local
+              ? AudioSource.file(f.path, tag: tag)
+              : AudioSource.uri(Uri.parse(v.url), tag: tag));
     } catch (e) {
       if (mounted) _msg('تعذّر تشغيل الصوت: ${'$e'.split('\n').first}');
     }
@@ -165,9 +170,10 @@ class _AdhanCatalogScreenState extends State<AdhanCatalogScreen> {
                               builder: (_, __) => IconButton(
                                 iconSize: 34,
                                 tooltip: 'استماع',
-                                icon: Icon(QuranPlayer.instance.previewId == v.id
-                                    ? Icons.stop_circle
-                                    : Icons.play_circle),
+                                icon: Icon(
+                                    QuranPlayer.instance.previewId == v.id
+                                        ? Icons.stop_circle
+                                        : Icons.play_circle),
                                 onPressed: () => _preview(v),
                               ),
                             ),

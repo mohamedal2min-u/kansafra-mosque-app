@@ -64,7 +64,9 @@ class Identity extends ChangeNotifier {
   /// ينقل سجل هذا الهاتف إلى الحساب. الجدول يفعلها لأول حساب فقط، ويرجع عدد السجلات المنقولة.
   Future<int> claimDeviceHistory() async {
     try {
-      final uri = Uri.parse(MosqueConfig.donorsUrl).replace(queryParameters: await params().then((m) => {...m, 'action': 'claim'}));
+      final uri = Uri.parse(MosqueConfig.donorsUrl).replace(
+          queryParameters:
+              await params().then((m) => {...m, 'action': 'claim'}));
       final res = await http.get(uri).timeout(const Duration(seconds: 20));
       final m = RegExp(r'"moved":(\d+)').firstMatch(res.body);
       return m == null ? 0 : int.parse(m.group(1)!);

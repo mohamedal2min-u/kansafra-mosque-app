@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../config.dart';
+import '../launcher.dart';
 import '../donors/donors_tab.dart';
 
 /// صفحة التبرعات: قائمة المتبرعين (الأعلى ثم الأحدث) وزر «تبرع الآن» ثابت أسفلها.
@@ -17,7 +18,8 @@ class _DonationsScreenState extends State<DonationsScreen> {
   Key _listKey = UniqueKey();
 
   Future<void> _donate() async {
-    await Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) => const MethodsPage()));
+    await Navigator.of(context)
+        .push<void>(MaterialPageRoute(builder: (_) => const MethodsPage()));
     if (mounted) setState(() => _listKey = UniqueKey());
   }
 
@@ -27,7 +29,8 @@ class _DonationsScreenState extends State<DonationsScreen> {
     return Column(children: [
       Expanded(child: DonorsList(key: _listKey)),
       Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 30), // مسافة فوق الزر الأوسط البارز
+        padding: const EdgeInsets.fromLTRB(
+            16, 8, 16, 30), // مسافة فوق الزر الأوسط البارز
         child: FilledButton.icon(
           style: FilledButton.styleFrom(
             backgroundColor: scheme.tertiary,
@@ -36,7 +39,8 @@ class _DonationsScreenState extends State<DonationsScreen> {
           ),
           onPressed: _donate,
           icon: const Icon(Icons.favorite),
-          label: const Text('تبرع الآن', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          label: const Text('تبرع الآن',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
         ),
       ),
     ]);
@@ -89,7 +93,10 @@ class _TrustRow extends StatelessWidget {
               child: Icon(icon, color: scheme.primary, size: 26),
             ),
             const SizedBox(height: 6),
-            Text(text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+            Text(text,
+                textAlign: TextAlign.center,
+                style:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
           ]),
         );
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -100,25 +107,19 @@ class _TrustRow extends StatelessWidget {
   }
 }
 
-const _launcher = MethodChannel('kansafra/launcher');
-
 /// ينسخ رقم الحساب ثم يحاول فتح شام كاش. إن لم يُفتح يطلب من المستخدم فتحه ولصق الرقم.
 Future<void> _openShamCash(BuildContext context, DonationMethod m) async {
   await Clipboard.setData(ClipboardData(text: m.details));
   var opened = false;
   if (!kIsWeb && MosqueConfig.shamCashPackages.isNotEmpty) {
-    try {
-      final url = MosqueConfig.shamCashPayUrl.replaceAll('{account}', m.details);
-      opened = await _launcher.invokeMethod<bool>('openApp', {
-            'packages': MosqueConfig.shamCashPackages,
-            if (url.isNotEmpty) 'url': url,
-          }) ??
-          false;
-    } catch (_) {}
+    final url = MosqueConfig.shamCashPayUrl.replaceAll('{account}', m.details);
+    opened = await Launcher.openApp(MosqueConfig.shamCashPackages,
+        url: url.isEmpty ? null : url);
   }
   if (!opened && context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('افتح تطبيق شام كاش وامسح الرمز، أو الصق رقم الحساب (نُسخ تلقائيًا) في خانة التحويل.'),
+      content: Text(
+          'افتح تطبيق شام كاش وامسح الرمز، أو الصق رقم الحساب (نُسخ تلقائيًا) في خانة التحويل.'),
       duration: Duration(seconds: 6),
     ));
   }
@@ -131,12 +132,14 @@ class _MethodCard extends StatelessWidget {
   Widget _leading() => m.logo != null
       ? ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: Image.asset(m.logo!, width: 64, height: 40, fit: BoxFit.cover, cacheWidth: 160),
+          child: Image.asset(m.logo!,
+              width: 64, height: 40, fit: BoxFit.cover, cacheWidth: 160),
         )
       : CircleAvatar(
           backgroundColor: Color(m.color),
           foregroundColor: Colors.white,
-          child: Text(m.badge, style: const TextStyle(fontWeight: FontWeight.bold)),
+          child: Text(m.badge,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
         );
 
   @override
@@ -163,7 +166,9 @@ class _MethodCard extends StatelessWidget {
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
           const SizedBox(height: 10),
-          const Text('اضغط الزر ليُفتح تطبيق شام كاش، ثم الصق رقم الحساب (نُسخ تلقائيًا) واكتب المبلغ:', textAlign: TextAlign.center),
+          const Text(
+              'اضغط الزر ليُفتح تطبيق شام كاش، ثم الصق رقم الحساب (نُسخ تلقائيًا) واكتب المبلغ:',
+              textAlign: TextAlign.center),
           const SizedBox(height: 8),
           FilledButton.icon(
             onPressed: () => _openShamCash(context, m),
