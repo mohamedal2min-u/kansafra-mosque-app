@@ -11,13 +11,3 @@
 | v4 | [Adhan, Great Mosque of Mecca - Jan 21, 2013.webm](https://commons.wikimedia.org/wiki/File:Adhan,_Great_Mosque_of_Mecca_-_Jan_21,_2013.webm) | Seyfula Islam | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
 
 نغمات التعديلات (`accountant_edit.wav` و`manager_edit.wav` و`daily_entry.wav`) مولَّدة برمجياً.
-
-## مضاف من Internet Archive (v11 وv12 وv13)
-
-نسخ قصيرة فقط (أول 25 ثانية، mp3 أحادي 64 كيلوبت، تطبيع للصوت). الترخيص «Public Domain» كما وسمه الرافع في صفحة الملف، والتفاصيل في tools/adhan_report.md.
-
-| الملف | المصدر | المؤذن |
-|---|---|---|
-| v11 | [archive.org/details/nhichem_gmail_201906](https://archive.org/details/nhichem_gmail_201906) | سيد احمد سري |
-| v12 | [archive.org/details/20200117_20200117_0734](https://archive.org/details/20200117_20200117_0734) | عدلان الفرقاني |
-| v13 | [archive.org/details/IshaAzanByMoazzambegMirza07092013](https://archive.org/details/IshaAzanByMoazzambegMirza07092013) | Moazzam Mirza |
