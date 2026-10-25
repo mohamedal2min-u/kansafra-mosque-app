@@ -162,13 +162,13 @@ class _HomeShellState extends State<HomeShell> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(MosqueConfig.name),
-        actions: [
-          IconButton(
+        leading: IconButton(
             icon: Icon(Theme.of(context).brightness == Brightness.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
             tooltip: 'فاتح / داكن',
             onPressed: () => ThemeController.set(
                 Theme.of(context).brightness == Brightness.dark ? ThemeMode.light : ThemeMode.dark),
           ),
+        actions: [
           IconButton(
             icon: const _AccountAvatar(),
             tooltip: 'حسابي',

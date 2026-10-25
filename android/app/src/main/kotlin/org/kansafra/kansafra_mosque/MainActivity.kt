@@ -1,6 +1,11 @@
 package org.kansafra.kansafra_mosque
 
+import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Intent
+import android.os.Build
+import android.provider.MediaStore
+import java.io.File
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -40,9 +45,47 @@ class MainActivity : AudioServiceActivity() {
                         }
                     }
                     result.success(false)
+                } else if (call.method == "registerSound") {
+                    // يسجّل ملف أذان محمَّل في MediaStore ليستطيع النظام تشغيله كصوت إشعار (content://).
+                    val path = call.argument<String>("path") ?: ""
+                    val title = call.argument<String>("title") ?: "أذان"
+                    Thread {
+                        try {
+                            val uri = registerSound(path, title)
+                            runOnUiThread { result.success(uri) }
+                        } catch (e: Exception) {
+                            runOnUiThread { result.error("register_failed", e.message, null) }
+                        }
+                    }.start()
                 } else {
                     result.notImplemented()
                 }
             }
+    }
+
+    private fun registerSound(path: String, title: String): String {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) throw IllegalStateException("يتطلب أندرويد 10 أو أحدث")
+        val src = File(path)
+        val name = src.name
+        val resolver = contentResolver
+        val collection = MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        resolver.query(collection, arrayOf(MediaStore.Audio.Media._ID),
+            "${MediaStore.Audio.Media.DISPLAY_NAME}=?", arrayOf(name), null)?.use { c ->
+            if (c.moveToFirst()) return ContentUris.withAppendedId(collection, c.getLong(0)).toString()
+        }
+        val values = ContentValues().apply {
+            put(MediaStore.Audio.Media.DISPLAY_NAME, name)
+            put(MediaStore.Audio.Media.TITLE, title)
+            put(MediaStore.Audio.Media.MIME_TYPE, "audio/mpeg")
+            put(MediaStore.Audio.Media.RELATIVE_PATH, "Notifications/Kansafra")
+            put(MediaStore.Audio.Media.IS_NOTIFICATION, 1)
+            put(MediaStore.Audio.Media.IS_PENDING, 1)
+        }
+        val uri = resolver.insert(collection, values) ?: throw IllegalStateException("تعذّر تسجيل الصوت")
+        resolver.openOutputStream(uri)!!.use { out -> src.inputStream().use { it.copyTo(out) } }
+        values.clear()
+        values.put(MediaStore.Audio.Media.IS_PENDING, 0)
+        resolver.update(uri, values, null, null)
+        return uri.toString()
     }
 }

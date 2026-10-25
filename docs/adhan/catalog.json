@@ -1,0 +1,965 @@
+{
+ "version": 1,
+ "seconds": 30,
+ "voices": [
+  {
+   "id": "a001",
+   "name": "عبد الكريم جابري",
+   "file": "a001.mp3",
+   "fajr": false,
+   "bytes": 240782
+  },
+  {
+   "id": "a002",
+   "name": "عبدالمجيد السريحي",
+   "file": "a002.mp3",
+   "fajr": false,
+   "bytes": 240752
+  },
+  {
+   "id": "a003",
+   "name": "عبدالرحمن العراقي (1)",
+   "file": "a003.mp3",
+   "fajr": false,
+   "bytes": 240844
+  },
+  {
+   "id": "a004",
+   "name": "عبدالرحمن العراقي (2)",
+   "file": "a004.mp3",
+   "fajr": false,
+   "bytes": 240855
+  },
+  {
+   "id": "a005",
+   "name": "عبدالرحمن العراقي (3)",
+   "file": "a005.mp3",
+   "fajr": false,
+   "bytes": 240838
+  },
+  {
+   "id": "a006",
+   "name": "عبدالرحمن كساب (1)",
+   "file": "a006.mp3",
+   "fajr": false,
+   "bytes": 240985
+  },
+  {
+   "id": "a007",
+   "name": "عبدالرحمن كساب (2)",
+   "file": "a007.mp3",
+   "fajr": false,
+   "bytes": 240935
+  },
+  {
+   "id": "a008",
+   "name": "عبدالرحمن ماجد",
+   "file": "a008.mp3",
+   "fajr": false,
+   "bytes": 240840
+  },
+  {
+   "id": "a009",
+   "name": "عبدالولي الأركاني",
+   "file": "a009.mp3",
+   "fajr": false,
+   "bytes": 240808
+  },
+  {
+   "id": "a010",
+   "name": "عبدالله الذهبي - مصر",
+   "file": "a010.mp3",
+   "fajr": false,
+   "bytes": 240902
+  },
+  {
+   "id": "a011",
+   "name": "عبدالله المكناوي",
+   "file": "a011.mp3",
+   "fajr": false,
+   "bytes": 240896
+  },
+  {
+   "id": "a012",
+   "name": "عبدالله الصباوي",
+   "file": "a012.mp3",
+   "fajr": false,
+   "bytes": 240852
+  },
+  {
+   "id": "a013",
+   "name": "عبد الباسط عبد الصمد - مصر (1)",
+   "file": "a013.mp3",
+   "fajr": false,
+   "bytes": 240851
+  },
+  {
+   "id": "a014",
+   "name": "عبد الباسط عبد الصمد - مصر (2)",
+   "file": "a014.mp3",
+   "fajr": false,
+   "bytes": 240832
+  },
+  {
+   "id": "a015",
+   "name": "عبد الباسط عبد الصمد - فجر مصر (1)",
+   "file": "a015.mp3",
+   "fajr": true,
+   "bytes": 240916
+  },
+  {
+   "id": "a016",
+   "name": "عبد الباسط عبد الصمد - فجر مصر (2)",
+   "file": "a016.mp3",
+   "fajr": true,
+   "bytes": 240939
+  },
+  {
+   "id": "a017",
+   "name": "أبو ياسر الجزائري",
+   "file": "a017.mp3",
+   "fajr": false,
+   "bytes": 240876
+  },
+  {
+   "id": "a018",
+   "name": "عادل مالك عبدالله المصري",
+   "file": "a018.mp3",
+   "fajr": false,
+   "bytes": 240908
+  },
+  {
+   "id": "a019",
+   "name": "أدهم الشرقاوي",
+   "file": "a019.mp3",
+   "fajr": false,
+   "bytes": 240871
+  },
+  {
+   "id": "a020",
+   "name": "أذان جورجيا",
+   "file": "a020.mp3",
+   "fajr": false,
+   "bytes": 240809
+  },
+  {
+   "id": "a021",
+   "name": "أذان كينيا",
+   "file": "a021.mp3",
+   "fajr": false,
+   "bytes": 246245
+  },
+  {
+   "id": "a022",
+   "name": "أذان الرياض السعودية",
+   "file": "a022.mp3",
+   "fajr": false,
+   "bytes": 241021
+  },
+  {
+   "id": "a023",
+   "name": "أحمد عامر محمد",
+   "file": "a023.mp3",
+   "fajr": false,
+   "bytes": 240839
+  },
+  {
+   "id": "a024",
+   "name": "أحمد العاني",
+   "file": "a024.mp3",
+   "fajr": false,
+   "bytes": 240838
+  },
+  {
+   "id": "a025",
+   "name": "أحمد العمادي - قطر",
+   "file": "a025.mp3",
+   "fajr": false,
+   "bytes": 241154
+  },
+  {
+   "id": "a026",
+   "name": "أحمد الحراسيس",
+   "file": "a026.mp3",
+   "fajr": false,
+   "bytes": 241053
+  },
+  {
+   "id": "a027",
+   "name": "أحمد النفيس",
+   "file": "a027.mp3",
+   "fajr": false,
+   "bytes": 240817
+  },
+  {
+   "id": "a028",
+   "name": "أحمد علي - مصر",
+   "file": "a028.mp3",
+   "fajr": false,
+   "bytes": 240891
+  },
+  {
+   "id": "a029",
+   "name": "أحمد فخرو - قطر",
+   "file": "a029.mp3",
+   "fajr": false,
+   "bytes": 258004
+  },
+  {
+   "id": "a030",
+   "name": "أحمد الطرابلسي (1)",
+   "file": "a030.mp3",
+   "fajr": false,
+   "bytes": 240857
+  },
+  {
+   "id": "a031",
+   "name": "أحمد الطرابلسي (2)",
+   "file": "a031.mp3",
+   "fajr": false,
+   "bytes": 240899
+  },
+  {
+   "id": "a032",
+   "name": "أحمد الطرابلسي (3)",
+   "file": "a032.mp3",
+   "fajr": false,
+   "bytes": 240899
+  },
+  {
+   "id": "a033",
+   "name": "أحمد الطرابلسي (4)",
+   "file": "a033.mp3",
+   "fajr": false,
+   "bytes": 240899
+  },
+  {
+   "id": "a034",
+   "name": "أحمد الحداد",
+   "file": "a034.mp3",
+   "fajr": false,
+   "bytes": 240836
+  },
+  {
+   "id": "a035",
+   "name": "أحمد الكردي",
+   "file": "a035.mp3",
+   "fajr": false,
+   "bytes": 240925
+  },
+  {
+   "id": "a036",
+   "name": "أخدام بن المداني",
+   "file": "a036.mp3",
+   "fajr": false,
+   "bytes": 240965
+  },
+  {
+   "id": "a037",
+   "name": "الأمين محمد قانيوح",
+   "file": "a037.mp3",
+   "fajr": false,
+   "bytes": 240853
+  },
+  {
+   "id": "a038",
+   "name": "السيد مسلم",
+   "file": "a038.mp3",
+   "fajr": false,
+   "bytes": 240832
+  },
+  {
+   "id": "a039",
+   "name": "علي حسن عبد الخالق - قطر",
+   "file": "a039.mp3",
+   "fajr": false,
+   "bytes": 243706
+  },
+  {
+   "id": "a040",
+   "name": "علي بن أحمد ملا",
+   "file": "a040.mp3",
+   "fajr": false,
+   "bytes": 240797
+  },
+  {
+   "id": "a041",
+   "name": "Ali Ibn Ahmad Mala HQ",
+   "file": "a041.mp3",
+   "fajr": false,
+   "bytes": 240579
+  },
+  {
+   "id": "a042",
+   "name": "أنوار دومان - تركيا",
+   "file": "a042.mp3",
+   "fajr": false,
+   "bytes": 240868
+  },
+  {
+   "id": "a043",
+   "name": "Azan nakshabandi",
+   "file": "a043.mp3",
+   "fajr": false,
+   "bytes": 240579
+  },
+  {
+   "id": "a044",
+   "name": "بديع جادو (1)",
+   "file": "a044.mp3",
+   "fajr": false,
+   "bytes": 240838
+  },
+  {
+   "id": "a045",
+   "name": "بديع جادو (2)",
+   "file": "a045.mp3",
+   "fajr": false,
+   "bytes": 240832
+  },
+  {
+   "id": "a046",
+   "name": "بديع جادو (3)",
+   "file": "a046.mp3",
+   "fajr": false,
+   "bytes": 240832
+  },
+  {
+   "id": "a047",
+   "name": "بلباشر عبد القادر",
+   "file": "a047.mp3",
+   "fajr": false,
+   "bytes": 240870
+  },
+  {
+   "id": "a048",
+   "name": "بن سوانة (1)",
+   "file": "a048.mp3",
+   "fajr": false,
+   "bytes": 240851
+  },
+  {
+   "id": "a049",
+   "name": "بن سوانة (2)",
+   "file": "a049.mp3",
+   "fajr": false,
+   "bytes": 240856
+  },
+  {
+   "id": "a050",
+   "name": "عز الدين عمارنة",
+   "file": "a050.mp3",
+   "fajr": false,
+   "bytes": 240832
+  },
+  {
+   "id": "a051",
+   "name": "اذان الفجر بصوت نصر الدين طوبار",
+   "file": "a051.mp3",
+   "fajr": true,
+   "bytes": 240776
+  },
+  {
+   "id": "a052",
+   "name": "فارس عبد الغني",
+   "file": "a052.mp3",
+   "fajr": false,
+   "bytes": 240846
+  },
+  {
+   "id": "a053",
+   "name": "فواز فرحان الدماني",
+   "file": "a053.mp3",
+   "fajr": false,
+   "bytes": 240849
+  },
+  {
+   "id": "a054",
+   "name": "فايز عبد السلام",
+   "file": "a054.mp3",
+   "fajr": false,
+   "bytes": 240841
+  },
+  {
+   "id": "a055",
+   "name": "غرم البيشي",
+   "file": "a055.mp3",
+   "fajr": false,
+   "bytes": 240837
+  },
+  {
+   "id": "a056",
+   "name": "غازي السعدون",
+   "file": "a056.mp3",
+   "fajr": false,
+   "bytes": 240784
+  },
+  {
+   "id": "a057",
+   "name": "حمد الدغريري",
+   "file": "a057.mp3",
+   "fajr": false,
+   "bytes": 240933
+  },
+  {
+   "id": "a058",
+   "name": "حمدان الملكي - نجران السعودية",
+   "file": "a058.mp3",
+   "fajr": false,
+   "bytes": 240998
+  },
+  {
+   "id": "a059",
+   "name": "حمزة المجالي",
+   "file": "a059.mp3",
+   "fajr": false,
+   "bytes": 240844
+  },
+  {
+   "id": "a060",
+   "name": "حسن خلفان - قطر",
+   "file": "a060.mp3",
+   "fajr": false,
+   "bytes": 243690
+  },
+  {
+   "id": "a061",
+   "name": "حسن محمود باره",
+   "file": "a061.mp3",
+   "fajr": false,
+   "bytes": 240874
+  },
+  {
+   "id": "a062",
+   "name": "هشام خليل",
+   "file": "a062.mp3",
+   "fajr": false,
+   "bytes": 240838
+  },
+  {
+   "id": "a063",
+   "name": "حسين عفيفي",
+   "file": "a063.mp3",
+   "fajr": false,
+   "bytes": 240781
+  },
+  {
+   "id": "a064",
+   "name": "حسام الدين عبادة",
+   "file": "a064.mp3",
+   "fajr": false,
+   "bytes": 240851
+  },
+  {
+   "id": "a065",
+   "name": "إبراهيم الجميل",
+   "file": "a065.mp3",
+   "fajr": false,
+   "bytes": 240850
+  },
+  {
+   "id": "a066",
+   "name": "إبراهيم جابر",
+   "file": "a066.mp3",
+   "fajr": false,
+   "bytes": 240834
+  },
+  {
+   "id": "a067",
+   "name": "إبراهيم جبر أبو رحيق",
+   "file": "a067.mp3",
+   "fajr": false,
+   "bytes": 240893
+  },
+  {
+   "id": "a068",
+   "name": "إبراهيم جبر أبو رحيق - الفجر",
+   "file": "a068.mp3",
+   "fajr": true,
+   "bytes": 240891
+  },
+  {
+   "id": "a069",
+   "name": "إحسان حامد الدليمي",
+   "file": "a069.mp3",
+   "fajr": false,
+   "bytes": 240982
+  },
+  {
+   "id": "a070",
+   "name": "إسلام ياسين",
+   "file": "a070.mp3",
+   "fajr": false,
+   "bytes": 240842
+  },
+  {
+   "id": "a071",
+   "name": "عيسى الهجلاوي",
+   "file": "a071.mp3",
+   "fajr": false,
+   "bytes": 240846
+  },
+  {
+   "id": "a072",
+   "name": "كمال محمد المرعوش",
+   "file": "a072.mp3",
+   "fajr": false,
+   "bytes": 244838
+  },
+  {
+   "id": "a073",
+   "name": "كمال محمد المرعوش - المغرب",
+   "file": "a073.mp3",
+   "fajr": false,
+   "bytes": 245384
+  },
+  {
+   "id": "a074",
+   "name": "لافي العوني",
+   "file": "a074.mp3",
+   "fajr": false,
+   "bytes": 240816
+  },
+  {
+   "id": "a075",
+   "name": "محمود الفوازي",
+   "file": "a075.mp3",
+   "fajr": false,
+   "bytes": 246218
+  },
+  {
+   "id": "a076",
+   "name": "محمود حجازي",
+   "file": "a076.mp3",
+   "fajr": false,
+   "bytes": 240854
+  },
+  {
+   "id": "a077",
+   "name": "محمود الطواخ - مسجد الرفاعي القاهرة",
+   "file": "a077.mp3",
+   "fajr": false,
+   "bytes": 241066
+  },
+  {
+   "id": "a078",
+   "name": "محمود مصطفى النجار",
+   "file": "a078.mp3",
+   "fajr": false,
+   "bytes": 240855
+  },
+  {
+   "id": "a079",
+   "name": "ماجد الزامل",
+   "file": "a079.mp3",
+   "fajr": false,
+   "bytes": 240793
+  },
+  {
+   "id": "a080",
+   "name": "منصور الزهراني",
+   "file": "a080.mp3",
+   "fajr": false,
+   "bytes": 240852
+  },
+  {
+   "id": "a081",
+   "name": "مشاري راشد العفاسي - الكويت",
+   "file": "a081.mp3",
+   "fajr": false,
+   "bytes": 240875
+  },
+  {
+   "id": "a082",
+   "name": "مشاري راشد العفاسي - فجر الكويت",
+   "file": "a082.mp3",
+   "fajr": true,
+   "bytes": 240908
+  },
+  {
+   "id": "a083",
+   "name": "محمد صديق المنشاوي - أفغانستان",
+   "file": "a083.mp3",
+   "fajr": false,
+   "bytes": 240915
+  },
+  {
+   "id": "a084",
+   "name": "محمد صديق المنشاوي - مصر",
+   "file": "a084.mp3",
+   "fajr": false,
+   "bytes": 240894
+  },
+  {
+   "id": "a085",
+   "name": "Mohamed Tarek Reciting Azan",
+   "file": "a085.mp3",
+   "fajr": false,
+   "bytes": 240579
+  },
+  {
+   "id": "a086",
+   "name": "محمد صلاح الدين كبارة (1)",
+   "file": "a086.mp3",
+   "fajr": false,
+   "bytes": 240848
+  },
+  {
+   "id": "a087",
+   "name": "محمد صلاح الدين كبارة (2)",
+   "file": "a087.mp3",
+   "fajr": false,
+   "bytes": 240848
+  },
+  {
+   "id": "a088",
+   "name": "معاذ القاسمي - قطر",
+   "file": "a088.mp3",
+   "fajr": false,
+   "bytes": 243696
+  },
+  {
+   "id": "a089",
+   "name": "محمد عبد الحكم",
+   "file": "a089.mp3",
+   "fajr": false,
+   "bytes": 240853
+  },
+  {
+   "id": "a090",
+   "name": "محمد عادل",
+   "file": "a090.mp3",
+   "fajr": false,
+   "bytes": 240778
+  },
+  {
+   "id": "a091",
+   "name": "محمد الدمرداش",
+   "file": "a091.mp3",
+   "fajr": false,
+   "bytes": 240842
+  },
+  {
+   "id": "a092",
+   "name": "محمد القرين الملوكي (1)",
+   "file": "a092.mp3",
+   "fajr": false,
+   "bytes": 240851
+  },
+  {
+   "id": "a093",
+   "name": "محمد القرين الملوكي (2)",
+   "file": "a093.mp3",
+   "fajr": false,
+   "bytes": 240844
+  },
+  {
+   "id": "a094",
+   "name": "محمد الزاهد",
+   "file": "a094.mp3",
+   "fajr": false,
+   "bytes": 240804
+  },
+  {
+   "id": "a095",
+   "name": "محمد أشرف عوض",
+   "file": "a095.mp3",
+   "fajr": false,
+   "bytes": 240845
+  },
+  {
+   "id": "a096",
+   "name": "محمد بن موسى",
+   "file": "a096.mp3",
+   "fajr": false,
+   "bytes": 240872
+  },
+  {
+   "id": "a097",
+   "name": "محمد فتحي حنتور",
+   "file": "a097.mp3",
+   "fajr": false,
+   "bytes": 240938
+  },
+  {
+   "id": "a098",
+   "name": "محمد حمود",
+   "file": "a098.mp3",
+   "fajr": false,
+   "bytes": 240882
+  },
+  {
+   "id": "a099",
+   "name": "محمد حمود - كولومبيا",
+   "file": "a099.mp3",
+   "fajr": false,
+   "bytes": 240970
+  },
+  {
+   "id": "a100",
+   "name": "محمد حسن الشهاوي",
+   "file": "a100.mp3",
+   "fajr": false,
+   "bytes": 240845
+  },
+  {
+   "id": "a101",
+   "name": "محمد ناجي (1)",
+   "file": "a101.mp3",
+   "fajr": false,
+   "bytes": 240861
+  },
+  {
+   "id": "a102",
+   "name": "محمد ناجي (2)",
+   "file": "a102.mp3",
+   "fajr": false,
+   "bytes": 240858
+  },
+  {
+   "id": "a103",
+   "name": "محمد ناجي (3)",
+   "file": "a103.mp3",
+   "fajr": false,
+   "bytes": 240867
+  },
+  {
+   "id": "a104",
+   "name": "محمد ناصر الدين الألباني - الأردن",
+   "file": "a104.mp3",
+   "fajr": false,
+   "bytes": 240907
+  },
+  {
+   "id": "a105",
+   "name": "محمد رمضان سعد - الحرم المكي",
+   "file": "a105.mp3",
+   "fajr": false,
+   "bytes": 241346
+  },
+  {
+   "id": "a106",
+   "name": "محمد إبراهيم إسماعيل عبدالله",
+   "file": "a106.mp3",
+   "fajr": false,
+   "bytes": 240875
+  },
+  {
+   "id": "a107",
+   "name": "مختار عبد الحميد حافظ",
+   "file": "a107.mp3",
+   "fajr": false,
+   "bytes": 240983
+  },
+  {
+   "id": "a108",
+   "name": "مصطفى وليد",
+   "file": "a108.mp3",
+   "fajr": false,
+   "bytes": 240874
+  },
+  {
+   "id": "a109",
+   "name": "نصر الدين طوبار",
+   "file": "a109.mp3",
+   "fajr": false,
+   "bytes": 240789
+  },
+  {
+   "id": "a110",
+   "name": "ناصر عبد الجبار - قطر",
+   "file": "a110.mp3",
+   "fajr": false,
+   "bytes": 241087
+  },
+  {
+   "id": "a111",
+   "name": "ناصر العبيد (1)",
+   "file": "a111.mp3",
+   "fajr": false,
+   "bytes": 240836
+  },
+  {
+   "id": "a112",
+   "name": "ناصر العبيد (2)",
+   "file": "a112.mp3",
+   "fajr": false,
+   "bytes": 240971
+  },
+  {
+   "id": "a113",
+   "name": "ناصر العبيد (3)",
+   "file": "a113.mp3",
+   "fajr": false,
+   "bytes": 241005
+  },
+  {
+   "id": "a114",
+   "name": "ناصر القطامي - المملكة العربية السعودية",
+   "file": "a114.mp3",
+   "fajr": false,
+   "bytes": 240914
+  },
+  {
+   "id": "a115",
+   "name": "ناصر القطامي - الرياض",
+   "file": "a115.mp3",
+   "fajr": false,
+   "bytes": 240933
+  },
+  {
+   "id": "a116",
+   "name": "عمرو صبحي",
+   "file": "a116.mp3",
+   "fajr": false,
+   "bytes": 240831
+  },
+  {
+   "id": "a117",
+   "name": "عثمان المسعمي",
+   "file": "a117.mp3",
+   "fajr": false,
+   "bytes": 245886
+  },
+  {
+   "id": "a118",
+   "name": "ربيع عبد الرحيم عيسى",
+   "file": "a118.mp3",
+   "fajr": false,
+   "bytes": 240858
+  },
+  {
+   "id": "a119",
+   "name": "رابح بن دراح الجزائري",
+   "file": "a119.mp3",
+   "fajr": false,
+   "bytes": 240809
+  },
+  {
+   "id": "a120",
+   "name": "رياض الجزائري - الجزائر",
+   "file": "a120.mp3",
+   "fajr": false,
+   "bytes": 240885
+  },
+  {
+   "id": "a121",
+   "name": "صالح النابت - قطر",
+   "file": "a121.mp3",
+   "fajr": false,
+   "bytes": 243694
+  },
+  {
+   "id": "a122",
+   "name": "سامر الصغير",
+   "file": "a122.mp3",
+   "fajr": false,
+   "bytes": 240842
+  },
+  {
+   "id": "a123",
+   "name": "الشيخ النقشبندى",
+   "file": "a123.mp3",
+   "fajr": false,
+   "bytes": 240767
+  },
+  {
+   "id": "a124",
+   "name": "الشيخ طارق محمد",
+   "file": "a124.mp3",
+   "fajr": false,
+   "bytes": 240867
+  },
+  {
+   "id": "a125",
+   "name": "طه الجنيد",
+   "file": "a125.mp3",
+   "fajr": false,
+   "bytes": 240799
+  },
+  {
+   "id": "a126",
+   "name": "طالب القنوبي",
+   "file": "a126.mp3",
+   "fajr": false,
+   "bytes": 240836
+  },
+  {
+   "id": "a127",
+   "name": "تامر إسلام",
+   "file": "a127.mp3",
+   "fajr": false,
+   "bytes": 240832
+  },
+  {
+   "id": "a128",
+   "name": "طارق فتح أحمد",
+   "file": "a128.mp3",
+   "fajr": false,
+   "bytes": 240944
+  },
+  {
+   "id": "a129",
+   "name": "وديع اليمني",
+   "file": "a129.mp3",
+   "fajr": false,
+   "bytes": 240798
+  },
+  {
+   "id": "a130",
+   "name": "وادي حمد اليماني",
+   "file": "a130.mp3",
+   "fajr": false,
+   "bytes": 240836
+  },
+  {
+   "id": "a131",
+   "name": "وليد محساس",
+   "file": "a131.mp3",
+   "fajr": false,
+   "bytes": 240840
+  },
+  {
+   "id": "a132",
+   "name": "ياسين الأسف",
+   "file": "a132.mp3",
+   "fajr": false,
+   "bytes": 240844
+  },
+  {
+   "id": "a133",
+   "name": "ياسين الأسف - فجر العراق",
+   "file": "a133.mp3",
+   "fajr": true,
+   "bytes": 240912
+  },
+  {
+   "id": "a134",
+   "name": "ياسر عبدالله الهوري - قطر",
+   "file": "a134.mp3",
+   "fajr": false,
+   "bytes": 240967
+  },
+  {
+   "id": "a135",
+   "name": "ياسر الدوسري - المملكة العربية السعودية",
+   "file": "a135.mp3",
+   "fajr": false,
+   "bytes": 240928
+  },
+  {
+   "id": "a136",
+   "name": "أذان أحمد سعد العجمي مصر",
+   "file": "a136.mp3",
+   "fajr": false,
+   "bytes": 240680
+  },
+  {
+   "id": "a137",
+   "name": "سعد الغامدي",
+   "file": "a137.mp3",
+   "fajr": false,
+   "bytes": 240682
+  }
+ ]
+}

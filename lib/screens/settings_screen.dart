@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 
 import '../quran/audio_store.dart';
+import 'adhan_catalog_screen.dart';
 import '../quran/downloader.dart';
 import '../services/adhan_service.dart';
 import '../settings.dart';
@@ -66,7 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
     setState(() => _playingId = id);
     try {
       final player = _player ??= AudioPlayer();
-      await player.setAsset(v.asset(_choice.long));
+      await player.setAudioSource(AudioSource.asset(v.asset(_choice.long), tag: MediaItem(id: v.id, title: v.name, album: 'الأذان')));
       await player.play();
     } catch (_) {}
     if (mounted) setState(() => _playingId = null);
@@ -74,7 +76,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
 
   @override
   Widget build(BuildContext context) {
-    final selected = _choice.auto ? 'auto' : _choice.voice?.id ?? 'default';
+    final selected = _choice.custom != null ? 'custom' : _choice.auto ? 'auto' : _choice.voice?.id ?? 'default';
     final perm = _perm;
     return ListView(children: [
       if (perm != null && !perm.ok)
@@ -152,7 +154,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
             ButtonSegment(value: true, label: Text('كامل')),
           ],
           selected: {_choice.long},
-          onSelectionChanged: (s) => _pick(AdhanChoice(_choice.voice, s.first, auto: _choice.auto)),
+          onSelectionChanged: (s) => _pick(AdhanChoice(_choice.voice, s.first, auto: _choice.auto, custom: _choice.custom)),
         ),
       ),
       const Padding(
@@ -162,7 +164,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
       RadioGroup<String>(
         groupValue: selected,
         onChanged: (id) {
-          if (id == null) return;
+          if (id == null || id == 'custom') return;
           final v = adhanVoices.where((e) => e.id == id).firstOrNull;
           _pick(AdhanChoice(v, _choice.long, auto: id == 'auto'));
         },
@@ -183,7 +185,21 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
               ),
             ),
           const RadioListTile<String>(title: Text('صوت الإشعار العادي'), value: 'default'),
+          if (_choice.custom != null)
+            RadioListTile<String>(title: Text(_choice.custom!.name), subtitle: const Text('محمَّل من الإنترنت'), value: 'custom'),
         ]),
+      ),
+      ListTile(
+        leading: const Icon(Icons.cloud_download_rounded),
+        title: const Text('المزيد من المؤذنين'),
+        subtitle: const Text('نحو 140 مؤذنًا: استمع واختر، فيُحمَّل على هاتفك'),
+        trailing: const Icon(Icons.chevron_left),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => AdhanCatalogScreen(
+            current: _choice.custom,
+            onPicked: (c) => _pick(AdhanChoice(null, _choice.long, custom: c)),
+          ),
+        )),
       ),
       if (AudioStore.supported) const _SavedAudioTile(),
       ExpansionTile(

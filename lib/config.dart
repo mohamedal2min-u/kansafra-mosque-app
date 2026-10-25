@@ -1,5 +1,8 @@
 /// إعدادات المسجد. عدّل القيم هنا فقط.
 class MosqueConfig {
+  /// كتالوج الأذان الأونلاين (catalog.json والمقاطع) المنشور من مجلد docs/adhan في المستودع.
+  static const adhanCatalogBase =
+      'https://raw.githubusercontent.com/mohamedal2min-u/kansafra-mosque-app/main/docs/adhan';
   static const name = 'مسجد كنصفرة الكبير';
 
   static const latitude = 35.65862402383966;

@@ -96,8 +96,8 @@ class AdhanService {
           NotificationDetails(
             android: AndroidNotificationDetails(
               // صوت القناة لا يتغير بعد إنشائها، فلكل صوت قناة مستقلة.
-              sound.auto ? 'adhan_auto_$raw' : 'adhan_${sound.id}',
-              sound.auto ? 'الأذان (تلقائي: $raw)' : 'الأذان (${sound.label})',
+              sound.auto && sound.custom == null ? 'adhan_auto_$raw' : 'adhan_${sound.id}',
+              sound.auto && sound.custom == null ? 'الأذان (تلقائي: $raw)' : 'الأذان (${sound.label})',
               channelDescription: 'تنبيهات أوقات الصلاة',
               importance: Importance.max,
               priority: Priority.high,
@@ -106,7 +106,9 @@ class AdhanService {
               audioAttributesUsage: AudioAttributesUsage.alarm,
               visibility: NotificationVisibility.public,
               enableVibration: true,
-              sound: raw == null ? null : RawResourceAndroidNotificationSound(raw),
+              sound: sound.custom != null
+                  ? UriAndroidNotificationSound(sound.custom!.uri)
+                  : raw == null ? null : RawResourceAndroidNotificationSound(raw),
             ),
             iOS: const DarwinNotificationDetails(presentSound: true),
           ),

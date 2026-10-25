@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -31,6 +33,25 @@ final adhanVoices = <AdhanVoice>[
   for (final d in extraAdhanData) AdhanVoice(d[0], d[1], d[2], d[3], hasLong: false, inAuto: d[4] == '1'),
 ];
 
+/// مؤذن حمّله المستخدم من الكتالوج الأونلاين وسُجّل في النظام ([uri] من نوع content://).
+class CustomAdhan {
+  final String id;
+  final String name;
+  final String uri;
+  const CustomAdhan(this.id, this.name, this.uri);
+
+  Map<String, String> toJson() => {'id': id, 'name': name, 'uri': uri};
+  static CustomAdhan? fromJson(String? raw) {
+    if (raw == null) return null;
+    try {
+      final m = (jsonDecode(raw) as Map).cast<String, dynamic>();
+      return CustomAdhan(m['id'] as String, m['name'] as String, m['uri'] as String);
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
 /// اختيار المستخدم لصوت التنبيه. [voice] فارغ مع [auto] خطأ يعني صوت الإشعار العادي.
 /// [auto] (الافتراضي): لكل صلاة مؤذن مختلف من المؤذنين المضمّنين بالتناوب.
 class AdhanChoice {
@@ -38,10 +59,11 @@ class AdhanChoice {
   final AdhanVoice? voice;
   final bool long;
   final bool auto;
-  const AdhanChoice(this.voice, this.long, {this.auto = false});
+  final CustomAdhan? custom; // مؤذن محمَّل من الكتالوج (يتقدّم على بقية الخيارات)
+  const AdhanChoice(this.voice, this.long, {this.auto = false, this.custom});
 
-  String get id => auto ? 'auto_${long ? 'long' : 'short'}' : voice == null ? 'default' : '${voice!.id}_${long ? 'long' : 'short'}';
-  String get label => auto
+  String get id => custom != null ? 'custom_${custom!.id}' : auto ? 'auto_${long ? 'long' : 'short'}' : voice == null ? 'default' : '${voice!.id}_${long ? 'long' : 'short'}';
+  String get label => custom != null ? 'أذان: ${custom!.name}' : auto
       ? 'تلقائي: مؤذن مختلف لكل صلاة (${long ? 'كامل' : 'قصير'})'
       : voice == null ? 'صوت الإشعار العادي' : '${voice!.name} (${long ? 'كامل' : 'قصير'})';
 
@@ -54,26 +76,33 @@ class AdhanChoice {
   }
 
   /// اسم ملف الصوت لهذه الصلاة (null = صوت الإشعار العادي).
-  String? rawNameFor(String prayer, int epochDay) =>
-      auto ? voiceFor(prayer, epochDay).rawName(long) : voice?.rawName(long);
+  String? rawNameFor(String prayer, int epochDay) => custom != null
+      ? null
+      : auto ? voiceFor(prayer, epochDay).rawName(long) : voice?.rawName(long);
 }
 
 class AppSettings {
   static const _kVoice = 'adhan_voice';
   static const _kLong = 'adhan_long';
   static const _kEnabled = 'adhan_enabled';
+  static const _kCustom = 'adhan_custom';
 
   static Future<AdhanChoice> adhanChoice() async {
     final p = await SharedPreferences.getInstance();
     final id = p.getString(_kVoice) ?? 'auto';
     final long = p.getBool(_kLong) ?? false;
-    if (id == 'auto') return AdhanChoice(null, long, auto: true);
+    if (id == 'custom') {
+      final c = CustomAdhan.fromJson(p.getString(_kCustom));
+      if (c != null) return AdhanChoice(null, long, custom: c);
+    }
+    if (id == 'auto' || id == 'custom') return AdhanChoice(null, long, auto: true);
     return AdhanChoice(adhanVoices.where((v) => v.id == id).firstOrNull, long);
   }
 
   static Future<void> setAdhanChoice(AdhanChoice c) async {
     final p = await SharedPreferences.getInstance();
-    await p.setString(_kVoice, c.auto ? 'auto' : c.voice?.id ?? 'default');
+    await p.setString(_kVoice, c.custom != null ? 'custom' : c.auto ? 'auto' : c.voice?.id ?? 'default');
+    if (c.custom != null) await p.setString(_kCustom, jsonEncode(c.custom!.toJson()));
     await p.setBool(_kLong, c.long);
   }
 
