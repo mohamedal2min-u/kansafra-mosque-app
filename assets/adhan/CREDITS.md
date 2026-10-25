@@ -11,3 +11,7 @@
 | v4 | [Adhan, Great Mosque of Mecca - Jan 21, 2013.webm](https://commons.wikimedia.org/wiki/File:Adhan,_Great_Mosque_of_Mecca_-_Jan_21,_2013.webm) | Seyfula Islam | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
 
 نغمات التعديلات (`accountant_edit.wav` و`manager_edit.wav` و`daily_entry.wav`) مولَّدة برمجياً.
+
+## مضاف آليًا من Internet Archive (tools/fetch_adhan.py)
+
+النسخ القصيرة فقط (أول 25 ثانية، mp3 أحادي، تطبيع للصوت). التفاصيل في tools/adhan_report.md.
