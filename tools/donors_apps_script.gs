@@ -70,6 +70,13 @@ function doGet(e) {
   }));
 }
 
+// شغّل هذه الدالة مرة واحدة من المحرّر (زر Run) ووافق على الأذونات، ثم: نشر ← إدارة عمليات النشر ← تعديل ← إصدار جديد.
+// بدونها يفشل التحقق من حساب Google (UrlFetchApp) ويظهر في التطبيق «تعذّر تحميل السجل» بعد تسجيل الدخول.
+function authorizeOnce() {
+  const r = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=x', { muteHttpExceptions: true });
+  Logger.log('UrlFetch OK: ' + r.getResponseCode());
+}
+
 // المالك: حساب Google موثّق (g:) أو معرّف الجهاز (d:) أو فارغ. null = رمز دخول غير صالح.
 function ownerOf(p) {
   if (p.idToken) {

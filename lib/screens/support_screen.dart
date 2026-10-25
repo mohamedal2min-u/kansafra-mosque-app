@@ -1,79 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
-import '../account/identity.dart';
 import '../config.dart';
 import '../launcher.dart';
 
-/// صفحة المساعدة والدعم: تعريف سريع ونموذج يصل إلى ورقة «الدعم» في جدول Google.
-class SupportScreen extends StatefulWidget {
+/// صفحة المساعدة والدعم: المحادثة مع المسجد عبر ماسنجر (صفحة المسجد على فيسبوك).
+class SupportScreen extends StatelessWidget {
   const SupportScreen({super.key});
 
-  @override
-  State<SupportScreen> createState() => _SupportScreenState();
-}
-
-class _SupportScreenState extends State<SupportScreen> {
-  static const _types = ['استفسار', 'اقتراح', 'مشكلة في التطبيق'];
-
-  final _name = TextEditingController();
-  final _phone = TextEditingController();
-  final _message = TextEditingController();
-  String _type = _types.first;
-  bool _busy = false;
-  String? _error;
-  bool _sent = false;
-
-  @override
-  void dispose() {
-    _name.dispose();
-    _phone.dispose();
-    _message.dispose();
-    super.dispose();
-  }
-
-  Future<void> _send() async {
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      final uri = Uri.parse(MosqueConfig.donorsUrl).replace(queryParameters: {
-        'action': 'support',
-        'name': _name.text.trim(),
-        'phone': _phone.text.trim(),
-        'type': _type,
-        'message': _message.text.trim(),
-        ...await Identity.instance.params(),
-      });
-      final res = await http.get(uri).timeout(const Duration(seconds: 20));
-      // النسخة القديمة من السكربت لا تعرف «support» وترجع قائمة المتبرعين دون حفظ الرسالة.
-      if (res.statusCode != 200 || !res.body.contains('"ok":true')) {
-        throw Exception('not saved');
-      }
-      if (mounted) {
-        setState(() {
-          _sent = true;
-          _busy = false;
-        });
-        _name.clear();
-        _phone.clear();
-        _message.clear();
-      }
-    } catch (_) {
-      if (mounted)
-        setState(() {
-          _busy = false;
-          _error = 'تعذّر الإرسال. تحقّق من الإنترنت وأعد المحاولة.';
-        });
+  Future<void> _open(BuildContext context, String url) async {
+    final ok = await Launcher.openUrl(url);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('تعذّر فتح الرابط.')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final canSend = _name.text.trim().isNotEmpty &&
-        _message.text.trim().isNotEmpty &&
-        !_busy;
+    final cs = Theme.of(context).colorScheme;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -84,7 +28,41 @@ class _SupportScreenState extends State<SupportScreen> {
         Text('المساعدة والدعم',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
+        Card(
+          color: cs.primaryContainer,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(children: [
+              const Icon(Icons.chat_rounded,
+                  size: 44, color: Color(0xFF0084FF)),
+              const SizedBox(height: 8),
+              Text('تحدّث معنا مباشرة',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 6),
+              const Text(
+                  'للاستفسار أو الاقتراح أو الإبلاغ عن مشكلة، راسل المسجد عبر ماسنجر.',
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 14),
+              if (Launcher.supported)
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF0084FF),
+                        foregroundColor: Colors.white),
+                    icon: const Icon(Icons.send_rounded),
+                    label: const Text('فتح المحادثة في ماسنجر'),
+                    onPressed: () => _open(context, MosqueConfig.messengerUrl),
+                  ),
+                ),
+            ]),
+          ),
+        ),
+        const SizedBox(height: 8),
         if (Launcher.supported)
           Card(
             child: ListTile(
@@ -93,16 +71,10 @@ class _SupportScreenState extends State<SupportScreen> {
               title: const Text('تابعنا على فيسبوك'),
               subtitle: const Text('أخبار المسجد ومواعيده'),
               trailing: const Icon(Icons.open_in_new_rounded),
-              onTap: () async {
-                final ok = await Launcher.openUrl(MosqueConfig.facebookUrl);
-                if (!ok && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('تعذّر فتح الرابط.')));
-                }
-              },
+              onTap: () => _open(context, MosqueConfig.facebookUrl),
             ),
           ),
-        if (Launcher.supported) const SizedBox(height: 8),
+        const SizedBox(height: 8),
         const Card(
           child: Padding(
             padding: EdgeInsets.all(12),
@@ -112,54 +84,6 @@ class _SupportScreenState extends State<SupportScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _name,
-          decoration: const InputDecoration(labelText: 'الاسم'),
-          onChanged: (_) => setState(() {
-            _sent = false;
-          }),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _phone,
-          keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(labelText: 'رقم الهاتف (اختياري)'),
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          initialValue: _type,
-          items: [
-            for (final t in _types) DropdownMenuItem(value: t, child: Text(t))
-          ],
-          onChanged: (v) => setState(() => _type = v!),
-          decoration: const InputDecoration(labelText: 'نوع الرسالة'),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _message,
-          maxLines: 5,
-          maxLength: 500,
-          decoration: const InputDecoration(labelText: 'رسالتك'),
-          onChanged: (_) => setState(() {
-            _sent = false;
-          }),
-        ),
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(_error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          ),
-        if (_sent)
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
-            child: Text(
-                'وصلت رسالتك، جزاك الله خيرًا. تجد الرد في «حسابي» (الأيقونة أعلى الشاشة).'),
-          ),
-        const SizedBox(height: 12),
-        FilledButton(
-            onPressed: canSend ? _send : null, child: const Text('إرسال')),
       ],
     );
   }

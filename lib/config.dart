@@ -1,5 +1,6 @@
 /// إعدادات المسجد. عدّل القيم هنا فقط.
 class MosqueConfig {
+  static const messengerUrl = 'https://m.me/kansafra.mosque';
   static const facebookUrl = 'https://www.facebook.com/kansafra.mosque/';
 
   /// كتالوج الأذان الأونلاين (catalog.json والمقاطع) المنشور من مجلد docs/adhan في المستودع.

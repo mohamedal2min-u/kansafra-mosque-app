@@ -21,6 +21,15 @@ class MyMessage {
   MyMessage(this.date, this.type, this.message, this.reply, this.replyDate);
 }
 
+/// سبب فشل تحميل السجل: auth = رفض الخادم رمز Google، server = ردّ غير متوقع من السكربت،
+/// old = نسخة سكربت قديمة لا تعرف «mine».
+class HistoryException implements Exception {
+  final String reason;
+  HistoryException(this.reason);
+  @override
+  String toString() => 'HistoryException($reason)';
+}
+
 class History {
   final List<MyDonation> donations;
   final List<MyMessage> messages;
@@ -35,8 +44,16 @@ Future<History> fetchHistory() async {
   });
   final res = await http.get(uri).timeout(const Duration(seconds: 20));
   if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
-  final j = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
-  if (j['error'] != null) throw Exception('auth');
+  final Object? body;
+  try {
+    body = jsonDecode(utf8.decode(res.bodyBytes));
+  } catch (_) {
+    // صفحة HTML بدل JSON: عادةً السكربت يحتاج إذن UrlFetch أو نشرًا جديدًا.
+    throw HistoryException('server');
+  }
+  if (body is List) throw HistoryException('old');
+  final j = body as Map<String, dynamic>;
+  if (j['error'] != null) throw HistoryException('auth');
   DateTime d(String s) => DateTime.tryParse(s) ?? DateTime.now();
   return History(
     [

@@ -22,6 +22,20 @@ class _AccountScreenState extends State<AccountScreen> {
   late Future<History> _future = fetchHistory();
   final _id = Identity.instance;
 
+  static String _errorText(Object? e) {
+    if (e is HistoryException) {
+      switch (e.reason) {
+        case 'auth':
+          return 'تعذّر التحقق من حساب Google. سجّل الخروج ثم ادخل من جديد.';
+        case 'server':
+          return 'خادم السجل لم يردّ بشكل صحيح. أبلغ إدارة التطبيق ليُحدَّث السكربت (إذن الاتصال الخارجي).';
+        case 'old':
+          return 'خادم السجل بنسخة قديمة. أبلغ إدارة التطبيق ليُحدَّث السكربت.';
+      }
+    }
+    return 'تعذّر تحميل السجل. تحقّق من الإنترنت.';
+  }
+
   void _reload() => setState(() => _future = fetchHistory());
 
   Future<void> _toggleSignIn() async {
@@ -93,11 +107,17 @@ class _AccountScreenState extends State<AccountScreen> {
                 if (snap.hasError) {
                   return Center(
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      const Text('تعذّر تحميل السجل. تحقّق من الإنترنت.'),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Text(_errorText(snap.error),
+                            textAlign: TextAlign.center),
+                      ),
                       const SizedBox(height: 12),
-                      FilledButton(
-                          onPressed: _reload,
-                          child: const Text('إعادة المحاولة')),
+                      Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 48),
+                          child: FilledButton(
+                              onPressed: _reload,
+                              child: const Text('إعادة المحاولة'))),
                     ]),
                   );
                 }

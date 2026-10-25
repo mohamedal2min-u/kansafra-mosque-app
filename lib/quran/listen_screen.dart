@@ -80,10 +80,13 @@ class _ListenScreenState extends State<ListenScreen> {
                       style: const TextStyle(fontSize: 11)),
                 ),
               const SizedBox(height: 12),
-              FilledButton(
-                onPressed: () => setState(() => _future = ReciterApi.load()),
-                child: const Text('إعادة المحاولة'),
-              ),
+              Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 48),
+                  child: FilledButton(
+                    onPressed: () =>
+                        setState(() => _future = ReciterApi.load()),
+                    child: const Text('إعادة المحاولة'),
+                  )),
             ]),
           );
         }

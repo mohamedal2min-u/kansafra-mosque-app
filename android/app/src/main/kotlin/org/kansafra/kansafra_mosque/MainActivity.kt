@@ -111,29 +111,48 @@ class MainActivity : AudioServiceActivity() {
         }
     }
 
+    /// يسجّل الملف في MediaStore ليقرأه النظام كصوت إشعار. يجرّب أكثر من مجلد/وسم لأن بعض الأجهزة
+    /// ترفض مسارًا أو وسمًا دون آخر، ويجمع أسباب الفشل في رسالة واحدة.
     private fun registerSound(path: String, title: String): String {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) throw IllegalStateException("يتطلب أندرويد 10 أو أحدث")
         val src = File(path)
+        if (!src.exists() || src.length() < 1000) throw IllegalStateException("الملف المحمَّل غير موجود أو تالف")
         val name = src.name
         val resolver = contentResolver
         val collection = MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-        resolver.query(collection, arrayOf(MediaStore.Audio.Media._ID),
-            "${MediaStore.Audio.Media.DISPLAY_NAME}=?", arrayOf(name), null)?.use { c ->
-            if (c.moveToFirst()) return ContentUris.withAppendedId(collection, c.getLong(0)).toString()
+        try {
+            resolver.query(collection, arrayOf(MediaStore.Audio.Media._ID),
+                "${MediaStore.Audio.Media.DISPLAY_NAME}=?", arrayOf(name), null)?.use { c ->
+                if (c.moveToFirst()) return ContentUris.withAppendedId(collection, c.getLong(0)).toString()
+            }
+        } catch (e: Exception) {
+            // نكمل بإدخال جديد.
         }
-        val values = ContentValues().apply {
-            put(MediaStore.Audio.Media.DISPLAY_NAME, name)
-            put(MediaStore.Audio.Media.TITLE, title)
-            put(MediaStore.Audio.Media.MIME_TYPE, "audio/mpeg")
-            put(MediaStore.Audio.Media.RELATIVE_PATH, "Notifications/Kansafra")
-            put(MediaStore.Audio.Media.IS_NOTIFICATION, 1)
-            put(MediaStore.Audio.Media.IS_PENDING, 1)
+        val errors = ArrayList<String>()
+        // (المجلد، هل يوسَم كنغمة إشعار)
+        val attempts = listOf("Notifications/Kansafra" to true, "Notifications" to true, "Music/Kansafra" to false)
+        for ((dir, flag) in attempts) {
+            var uri: android.net.Uri? = null
+            try {
+                val values = ContentValues().apply {
+                    put(MediaStore.Audio.Media.DISPLAY_NAME, name)
+                    put(MediaStore.Audio.Media.TITLE, title)
+                    put(MediaStore.Audio.Media.MIME_TYPE, "audio/mpeg")
+                    put(MediaStore.Audio.Media.RELATIVE_PATH, dir)
+                    if (flag) put(MediaStore.Audio.Media.IS_NOTIFICATION, 1)
+                    put(MediaStore.Audio.Media.IS_PENDING, 1)
+                }
+                uri = resolver.insert(collection, values) ?: throw IllegalStateException("insert returned null")
+                resolver.openOutputStream(uri)!!.use { out -> src.inputStream().use { it.copyTo(out) } }
+                values.clear()
+                values.put(MediaStore.Audio.Media.IS_PENDING, 0)
+                resolver.update(uri, values, null, null)
+                return uri.toString()
+            } catch (e: Exception) {
+                errors.add("$dir: ${e.javaClass.simpleName} ${e.message}")
+                try { if (uri != null) resolver.delete(uri, null, null) } catch (_: Exception) {}
+            }
         }
-        val uri = resolver.insert(collection, values) ?: throw IllegalStateException("تعذّر تسجيل الصوت")
-        resolver.openOutputStream(uri)!!.use { out -> src.inputStream().use { it.copyTo(out) } }
-        values.clear()
-        values.put(MediaStore.Audio.Media.IS_PENDING, 0)
-        resolver.update(uri, values, null, null)
-        return uri.toString()
+        throw IllegalStateException(errors.joinToString(" | "))
     }
 }

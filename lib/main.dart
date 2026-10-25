@@ -211,12 +211,16 @@ class _HomeShellState extends State<HomeShell> {
       body: Column(children: [
         const MiniPlayer(),
         Expanded(
-          child: IndexedStack(
-            index: _index,
-            children: [
-              for (var i = 0; i < _pages.length; i++)
-                _visited.contains(i) ? _pages[i] : const SizedBox.shrink(),
-            ],
+          // زر التبرعات المثبّت يبرز فوق الشريط نحو 34 بكسل: هامش يمنع تغطيته لأي زر أو نص بالأسفل.
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 44),
+            child: IndexedStack(
+              index: _index,
+              children: [
+                for (var i = 0; i < _pages.length; i++)
+                  _visited.contains(i) ? _pages[i] : const SizedBox.shrink(),
+              ],
+            ),
           ),
         ),
       ]),

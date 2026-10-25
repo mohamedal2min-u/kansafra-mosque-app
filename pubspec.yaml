@@ -40,6 +40,9 @@ flutter:
           weight: 500
         - asset: assets/fonts/Tajawal_700Bold.ttf
           weight: 700
+    - family: NotoNaskh
+      fonts:
+        - asset: assets/fonts/NotoNaskhArabic-Regular.ttf
   assets:
     - assets/quran.json
     - assets/LICENSE-quran.txt

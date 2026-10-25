@@ -68,20 +68,32 @@ class _AdhanCatalogScreenState extends State<AdhanCatalogScreen> {
       return;
     }
     setState(() => _busyId = v.id);
+    CustomAdhan c;
     try {
-      final c = await AdhanCatalog.downloadAndRegister(v);
-      await widget.onPicked(c);
+      c = await AdhanCatalog.downloadAndRegister(v);
+    } on PlatformException catch (e) {
+      if (mounted) {
+        _msg('تعذّر تسجيل الصوت في النظام: ${e.message ?? e.code}');
+        setState(() => _busyId = null);
+      }
+      return;
+    } catch (e) {
+      if (mounted) {
+        _msg('تعذّر التحميل: ${'$e'.split('\n').first}');
+        setState(() => _busyId = null);
+      }
+      return;
+    }
+    try {
+      await widget.onPicked(c); // يحفظ الاختيار ويعيد جدولة الأذان
       if (!mounted) return;
       setState(() {
         _downloaded.add(v.id);
         _currentId = v.id;
       });
       _msg('تم تحميل واعتماد: ${v.name}');
-    } on PlatformException catch (e) {
-      if (mounted) _msg('تعذّر اعتماد الصوت: ${e.message ?? e.code}');
     } catch (e) {
-      if (mounted)
-        _msg('تعذّر التحميل. تأكد من الاتصال بالإنترنت وأعد المحاولة.');
+      if (mounted) _msg('تعذّرت جدولة الأذان: ${'$e'.split('\n').first}');
     } finally {
       if (mounted) setState(() => _busyId = null);
     }
@@ -109,10 +121,13 @@ class _AdhanCatalogScreenState extends State<AdhanCatalogScreen> {
                     'تعذّر تحميل قائمة المؤذنين.\nتأكد من الاتصال بالإنترنت.',
                     textAlign: TextAlign.center),
                 const SizedBox(height: 12),
-                FilledButton(
-                    onPressed: () =>
-                        setState(() => _future = AdhanCatalog.load()),
-                    child: const Text('إعادة المحاولة')),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 48),
+                  child: FilledButton(
+                      onPressed: () =>
+                          setState(() => _future = AdhanCatalog.load()),
+                      child: const Text('إعادة المحاولة')),
+                ),
               ]),
             );
           }

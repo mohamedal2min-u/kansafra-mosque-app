@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,6 +7,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../config.dart';
 import '../settings.dart';
+import '../quran/khatma.dart';
 import 'prayer_calc.dart';
 
 /// جدولة تنبيه الأذان لخمس صلوات على مدى 7 أيام، وتُعاد الجدولة عند كل فتح للتطبيق.
@@ -15,6 +17,7 @@ class AdhanService {
 
   static const _days = 7;
   final _plugin = FlutterLocalNotificationsPlugin();
+  FlutterLocalNotificationsPlugin get plugin => _plugin;
 
   /// حالة الأذونات المطلوبة لعمل الأذان والتطبيق مغلق (أندرويد فقط).
   Future<AdhanPermissions> permissions() async {
@@ -58,6 +61,7 @@ class AdhanService {
     await android?.requestExactAlarmsPermission();
 
     await scheduleAll();
+    await Khatma.instance.scheduleReminders();
   }
 
   /// يجدول 7 أيام من التنبيهات. لا يعيد الجدولة (35 منبّهًا) عند كل فتح للتطبيق،
@@ -94,40 +98,51 @@ class AdhanService {
         if (at.isBefore(now)) continue;
         final raw =
             sound.rawNameFor(e.key, at.millisecondsSinceEpoch ~/ 86400000);
-        await _plugin.zonedSchedule(
-          id,
-          'حان الآن موعد أذان ${PrayerCalc.names[e.key]}',
-          MosqueConfig.name,
-          at,
-          NotificationDetails(
-            android: AndroidNotificationDetails(
-              // صوت القناة لا يتغير بعد إنشائها، فلكل صوت قناة مستقلة.
-              sound.auto && sound.custom == null
-                  ? 'adhan_auto_$raw'
-                  : 'adhan_${sound.id}',
-              sound.auto && sound.custom == null
-                  ? 'الأذان (تلقائي: $raw)'
-                  : 'الأذان (${sound.label})',
-              channelDescription: 'تنبيهات أوقات الصلاة',
-              importance: Importance.max,
-              priority: Priority.high,
-              // يُعامَل كمنبّه: يُسمَع بصوت المنبّه ويعمل والهاتف في وضع السكون.
-              category: AndroidNotificationCategory.alarm,
-              audioAttributesUsage: AudioAttributesUsage.alarm,
-              visibility: NotificationVisibility.public,
-              enableVibration: true,
-              sound: sound.custom != null
-                  ? UriAndroidNotificationSound(sound.custom!.uri)
-                  : raw == null
-                      ? null
-                      : RawResourceAndroidNotificationSound(raw),
-            ),
-            iOS: const DarwinNotificationDetails(presentSound: true),
-          ),
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-        );
+        // إن رفض النظام التنبيه الدقيق (لم يُمنح الإذن) نجدول تنبيهًا غير دقيق بدل أن يفشل كل شيء.
+        for (final mode in const [
+          AndroidScheduleMode.exactAllowWhileIdle,
+          AndroidScheduleMode.inexactAllowWhileIdle,
+        ]) {
+          try {
+            await _plugin.zonedSchedule(
+              id,
+              'حان الآن موعد أذان ${PrayerCalc.names[e.key]}',
+              MosqueConfig.name,
+              at,
+              NotificationDetails(
+                android: AndroidNotificationDetails(
+                  // صوت القناة لا يتغير بعد إنشائها، فلكل صوت قناة مستقلة.
+                  sound.auto && sound.custom == null
+                      ? 'adhan_auto_$raw'
+                      : 'adhan_${sound.id}',
+                  sound.auto && sound.custom == null
+                      ? 'الأذان (تلقائي: $raw)'
+                      : 'الأذان (${sound.label})',
+                  channelDescription: 'تنبيهات أوقات الصلاة',
+                  importance: Importance.max,
+                  priority: Priority.high,
+                  // يُعامَل كمنبّه: يُسمَع بصوت المنبّه ويعمل والهاتف في وضع السكون.
+                  category: AndroidNotificationCategory.alarm,
+                  audioAttributesUsage: AudioAttributesUsage.alarm,
+                  visibility: NotificationVisibility.public,
+                  enableVibration: true,
+                  sound: sound.custom != null
+                      ? UriAndroidNotificationSound(sound.custom!.uri)
+                      : raw == null
+                          ? null
+                          : RawResourceAndroidNotificationSound(raw),
+                ),
+                iOS: const DarwinNotificationDetails(presentSound: true),
+              ),
+              androidScheduleMode: mode,
+              uiLocalNotificationDateInterpretation:
+                  UILocalNotificationDateInterpretation.absoluteTime,
+            );
+            break;
+          } on PlatformException {
+            if (mode == AndroidScheduleMode.inexactAllowWhileIdle) rethrow;
+          }
+        }
       }
     }
   }
