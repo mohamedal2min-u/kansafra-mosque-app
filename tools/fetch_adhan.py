@@ -17,6 +17,11 @@ PER_ITEM = 4
 
 OK_LICENSE = re.compile(r'creativecommons\.org/(publicdomain/(zero|mark)/|licenses/by(-sa)?/)', re.I)
 BAD_TITLE = re.compile(r'quran|قرآن|قران|dua|دعاء|tarawih|تراويح|khutba|خطبة|lecture|nasheed|نشيد|iqama|إقامة|ringtone|remix|music', re.I)
+# لا نقبل وسم الترخيص وحده: أذان مشاهير القرّاء والمؤذنين محمي حتى لو وسمه الرافع «ملكية عامة».
+BLOCKED = re.compile(r'ear of the rat|desnia|mish|afasy|alafasy|misyari|rasyid|سريحي|surehi|sarihi|firebladetw|alqurantranslation|'
+                     r'commentary|نور على الدرب|faedahislam|herbst|hussary|الحصري|minshawi|المنشاوي|basit|عبد الباسط|refaat|'
+                     r'qatami|القطامي|ghamdi|الغامدي|sudais|السديس|shuraim|الشريم|nasser|toubar|طوبار', re.I)
+IS_ADHAN = re.compile(r'adhan|azan|azaan|adzan|athan|adan|أذان|اذان', re.I)
 AUDIO_FORMATS = {'vbr mp3', 'mp3', '128kbps mp3', '64kbps mp3', '192kbps mp3', '256kbps mp3', '320kbps mp3',
                  'ogg vorbis', 'flac', 'wave', '24bit flac', 'opus', 'mpeg audio', 'm4a', 'aac'}
 
@@ -74,7 +79,7 @@ def main():
             lic = lic[0] if lic else ''
         if not OK_LICENSE.search(lic):
             continue
-        if BAD_TITLE.search(str(d.get('title', ''))):
+        if BAD_TITLE.search(str(d.get('title', ''))) or BLOCKED.search(f"{d.get('title', '')} {d.get('creator', '')} {d['identifier']}"):
             continue
         cands.append((d['identifier'], str(d.get('title', '')), d.get('creator'), lic))
     print(f'{len(cands)} items with an acceptable license')
@@ -89,6 +94,7 @@ def main():
             print('skip', ident, e)
             continue
         n = 0
+        seen_len = set()
         for f in meta.get('files', []):
             if n >= PER_ITEM:
                 break
@@ -100,8 +106,14 @@ def main():
                 continue
             name = f['name']
             ftitle = f.get('title') or name
-            if BAD_TITLE.search(ftitle) or BAD_TITLE.search(name):
+            if BAD_TITLE.search(ftitle) or BAD_TITLE.search(name) or BLOCKED.search(f'{ftitle} {name}'):
                 continue
+            if not IS_ADHAN.search(f'{ftitle} {name} {title} {ident}'):
+                continue
+            # نفس التسجيل بصيغ متعددة (mp3/ogg) يأتي بطول متقارب: نأخذ واحدًا.
+            if int(length) // 3 in seen_len:
+                continue
+            seen_len.add(int(length) // 3)
             # أذان كامل ≈ دقيقة إلى 6 دقائق؛ ما عداه غالبًا ليس أذانًا.
             if not 50 <= length <= 400:
                 continue
