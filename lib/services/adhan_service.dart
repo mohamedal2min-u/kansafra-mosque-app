@@ -87,6 +87,7 @@ class AdhanService {
         final at = tz.TZDateTime.from(PrayerCalc.adjusted(e.key, e.value), tz.local);
         id++;
         if (at.isBefore(now)) continue;
+        final raw = sound.rawNameFor(e.key);
         await _plugin.zonedSchedule(
           id,
           'حان الآن موعد أذان ${PrayerCalc.names[e.key]}',
@@ -95,8 +96,8 @@ class AdhanService {
           NotificationDetails(
             android: AndroidNotificationDetails(
               // صوت القناة لا يتغير بعد إنشائها، فلكل صوت قناة مستقلة.
-              'adhan_${sound.id}',
-              'الأذان (${sound.label})',
+              sound.auto ? 'adhan_auto_$raw' : 'adhan_${sound.id}',
+              sound.auto ? 'الأذان (تلقائي: $raw)' : 'الأذان (${sound.label})',
               channelDescription: 'تنبيهات أوقات الصلاة',
               importance: Importance.max,
               priority: Priority.high,
@@ -105,9 +106,7 @@ class AdhanService {
               audioAttributesUsage: AudioAttributesUsage.alarm,
               visibility: NotificationVisibility.public,
               enableVibration: true,
-              sound: sound.rawName == null
-                  ? null
-                  : RawResourceAndroidNotificationSound(sound.rawName),
+              sound: raw == null ? null : RawResourceAndroidNotificationSound(raw),
             ),
             iOS: const DarwinNotificationDetails(presentSound: true),
           ),

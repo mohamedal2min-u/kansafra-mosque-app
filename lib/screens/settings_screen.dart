@@ -15,7 +15,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObserver {
   AdhanPermissions? _perm;
-  AdhanChoice _choice = AdhanChoice(adhanVoices.first, false);
+  AdhanChoice _choice = const AdhanChoice(null, false, auto: true);
   bool _enabled = true;
   AudioPlayer? _player; // يُنشأ عند أول استماع فقط
   String? _playingId;
@@ -74,7 +74,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
 
   @override
   Widget build(BuildContext context) {
-    final selected = _choice.voice?.id ?? 'default';
+    final selected = _choice.auto ? 'auto' : _choice.voice?.id ?? 'default';
     final perm = _perm;
     return ListView(children: [
       if (perm != null && !perm.ok)
@@ -152,7 +152,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
             ButtonSegment(value: true, label: Text('كامل')),
           ],
           selected: {_choice.long},
-          onSelectionChanged: (s) => _pick(AdhanChoice(_choice.voice, s.first)),
+          onSelectionChanged: (s) => _pick(AdhanChoice(_choice.voice, s.first, auto: _choice.auto)),
         ),
       ),
       const Padding(
@@ -164,9 +164,14 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
         onChanged: (id) {
           if (id == null) return;
           final v = adhanVoices.where((e) => e.id == id).firstOrNull;
-          _pick(AdhanChoice(v, _choice.long));
+          _pick(AdhanChoice(v, _choice.long, auto: id == 'auto'));
         },
         child: Column(children: [
+          const RadioListTile<String>(
+            title: Text('تلقائي (موصى به)'),
+            subtitle: Text('مؤذن مختلف لكل صلاة'),
+            value: 'auto',
+          ),
           for (final v in adhanVoices)
             RadioListTile<String>(
               title: Text(v.name),

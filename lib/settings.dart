@@ -21,15 +21,26 @@ const adhanVoices = <AdhanVoice>[
   AdhanVoice('voice4', 'v4', 'الحرم المكي (2013)', 'Seyfula Islam - CC BY 3.0'),
 ];
 
-/// اختيار المستخدم لصوت التنبيه. [voice] فارغ يعني صوت الإشعار العادي.
+/// اختيار المستخدم لصوت التنبيه. [voice] فارغ مع [auto] خطأ يعني صوت الإشعار العادي.
+/// [auto] (الافتراضي): لكل صلاة مؤذن مختلف من المؤذنين المضمّنين بالتناوب.
 class AdhanChoice {
+  static const prayers = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
   final AdhanVoice? voice;
   final bool long;
-  const AdhanChoice(this.voice, this.long);
+  final bool auto;
+  const AdhanChoice(this.voice, this.long, {this.auto = false});
 
-  String get id => voice == null ? 'default' : '${voice!.id}_${long ? 'long' : 'short'}';
-  String get label => voice == null ? 'صوت الإشعار العادي' : '${voice!.name} (${long ? 'كامل' : 'قصير'})';
-  String? get rawName => voice?.rawName(long);
+  String get id => auto ? 'auto_${long ? 'long' : 'short'}' : voice == null ? 'default' : '${voice!.id}_${long ? 'long' : 'short'}';
+  String get label => auto
+      ? 'تلقائي: مؤذن مختلف لكل صلاة (${long ? 'كامل' : 'قصير'})'
+      : voice == null ? 'صوت الإشعار العادي' : '${voice!.name} (${long ? 'كامل' : 'قصير'})';
+
+  /// المؤذن الذي يُنادى به لهذه الصلاة في الوضع التلقائي.
+  AdhanVoice voiceFor(String prayer) =>
+      adhanVoices[prayers.indexOf(prayer).clamp(0, prayers.length - 1) % adhanVoices.length];
+
+  /// اسم ملف الصوت لهذه الصلاة (null = صوت الإشعار العادي).
+  String? rawNameFor(String prayer) => auto ? voiceFor(prayer).rawName(long) : voice?.rawName(long);
 }
 
 class AppSettings {
@@ -39,14 +50,15 @@ class AppSettings {
 
   static Future<AdhanChoice> adhanChoice() async {
     final p = await SharedPreferences.getInstance();
-    final id = p.getString(_kVoice) ?? adhanVoices.first.id;
-    final voice = adhanVoices.where((v) => v.id == id).firstOrNull;
-    return AdhanChoice(voice, p.getBool(_kLong) ?? false);
+    final id = p.getString(_kVoice) ?? 'auto';
+    final long = p.getBool(_kLong) ?? false;
+    if (id == 'auto') return AdhanChoice(null, long, auto: true);
+    return AdhanChoice(adhanVoices.where((v) => v.id == id).firstOrNull, long);
   }
 
   static Future<void> setAdhanChoice(AdhanChoice c) async {
     final p = await SharedPreferences.getInstance();
-    await p.setString(_kVoice, c.voice?.id ?? 'default');
+    await p.setString(_kVoice, c.auto ? 'auto' : c.voice?.id ?? 'default');
     await p.setBool(_kLong, c.long);
   }
 
