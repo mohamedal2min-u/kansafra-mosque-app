@@ -43,18 +43,10 @@ class QuranPlayer extends ChangeNotifier {
     try {
       final tag = MediaItem(id: m.urlFor(s), title: 'سورة ${QuranData.name(s)}', artist: r.name, album: 'القرآن الكريم');
       AudioSource source;
-      if (AudioStore.supported) {
-        final f = await AudioStore.file(r, m, s);
-        if (await f.exists()) {
-          // محفوظة على الهاتف: تعمل بدون إنترنت.
-          source = AudioSource.file(f.path, tag: tag);
-        } else if (await AudioStore.isRegular(r.id)) {
-          // قارئ معتاد (أكثر من ساعة استماع): تُحفظ السورة أثناء الاستماع.
-          // ignore: experimental_member_use
-          source = LockCachingAudioSource(Uri.parse(m.urlFor(s)), cacheFile: f, tag: tag);
-        } else {
-          source = AudioSource.uri(Uri.parse(m.urlFor(s)), tag: tag);
-        }
+      final f = AudioStore.supported ? await AudioStore.file(r, m, s) : null;
+      if (f != null && await f.exists()) {
+        // محفوظة على الهاتف: تعمل بدون إنترنت.
+        source = AudioSource.file(f.path, tag: tag);
       } else {
         source = AudioSource.uri(Uri.parse(m.urlFor(s)), tag: tag);
       }

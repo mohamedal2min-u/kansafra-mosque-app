@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'quran_data.dart';
 
 import 'audio_store.dart';
+import 'downloader.dart';
 import 'player.dart';
 import 'reader_screen.dart';
 import 'reciters.dart';
@@ -182,10 +183,27 @@ class _ReciterScreenState extends State<ReciterScreen> {
   late Moshaf _moshaf = widget.reciter.moshafs.first;
   Set<int> _saved = {};
   int _listenSecs = 0;
+  Map<String, dynamic>? _pinned; // القارئ المحمَّل على الهاتف (واحد فقط)
+  int _lastDone = -1;
+
+  @override
+  void dispose() {
+    QuranDownloader.instance.removeListener(_onDownload);
+    super.dispose();
+  }
+
+  void _onDownload() {
+    final d = QuranDownloader.instance;
+    if (d.done != _lastDone || !d.running) {
+      _lastDone = d.done;
+      _refreshSaved();
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    QuranDownloader.instance.addListener(_onDownload);
     SharedPreferences.getInstance().then((p) {
       final saved = p.getString('$kLastMoshaf:${widget.reciter.id}');
       final m = widget.reciter.moshafs.where((e) => e.name == saved).firstOrNull;
@@ -199,7 +217,123 @@ class _ReciterScreenState extends State<ReciterScreen> {
 
   Future<void> _refreshSaved() async {
     final s = await AudioStore.savedSurahs(widget.reciter, _moshaf);
-    if (mounted) setState(() => _saved = s);
+    final pin = await AudioStore.pinned();
+    if (mounted) {
+      setState(() {
+        _saved = s;
+        _pinned = pin;
+      });
+    }
+  }
+
+  bool get _isPinnedHere => _pinned != null && _pinned!['id'] == widget.reciter.id && _pinned!['m'] == _moshaf.name;
+
+  static String _fmt(int b) =>
+      b < 1024 * 1024 * 1024 ? '${(b / 1024 / 1024).round()} م.ب' : '${(b / 1024 / 1024 / 1024).toStringAsFixed(1)} غ.ب';
+
+  Future<void> _startDownload() async {
+    final msg = ScaffoldMessenger.of(context);
+    if (!await QuranDownloader.onWifi()) {
+      msg.showSnackBar(const SnackBar(content: Text('التحميل متاح على Wi-Fi فقط. اتصل بشبكة Wi-Fi ثم أعد المحاولة.')));
+      return;
+    }
+    if (!mounted) return;
+    final replacing = _pinned != null && !_isPinnedHere;
+    final size = QuranDownloader.estimateBytes(_moshaf);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('تحميل المصحف للاستماع بدون إنترنت'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('${widget.reciter.name}\n${_moshaf.name}'),
+          const SizedBox(height: 8),
+          Text('عدد السور: ${_moshaf.surahs.length}'),
+          FutureBuilder<int?>(
+            future: size,
+            builder: (_, snap) => Text(snap.connectionState != ConnectionState.done
+                ? 'الحجم التقريبي: جارٍ الحساب...'
+                : snap.data == null
+                    ? 'الحجم التقريبي: غير معروف (قد يبلغ مئات الميغابايت)'
+                    : 'الحجم التقريبي: ${_fmt(snap.data!)}'),
+          ),
+          const SizedBox(height: 8),
+          const Text('• يعمل على Wi-Fi فقط، ويتوقف إن انقطع ويمكنك المتابعة.'),
+          const Text('• قارئ واحد فقط على الهاتف.'),
+          if (replacing) Text('• سيُحذف المحمَّل سابقًا (${_pinned!['name']}).', style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('تحميل')),
+        ],
+      ),
+    );
+    if (ok == true) {
+      QuranDownloader.instance.start(widget.reciter, _moshaf);
+    }
+  }
+
+  Widget _downloadCard(BuildContext context) {
+    final d = QuranDownloader.instance;
+    final cs = Theme.of(context).colorScheme;
+    final here = d.reciter?.id == widget.reciter.id && d.moshaf?.name == _moshaf.name;
+    final complete = _saved.length >= _moshaf.surahs.length && _moshaf.surahs.isNotEmpty;
+    Widget body;
+    if (d.running) {
+      body = here
+          ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(child: Text('جارٍ التحميل: ${d.done} / ${d.total} سورة')),
+                TextButton(onPressed: d.pause, child: const Text('إيقاف مؤقت')),
+              ]),
+              LinearProgressIndicator(value: d.total == 0 ? null : d.done / d.total),
+            ])
+          : const Text('يجري تحميل مصحف قارئ آخر...');
+    } else if (complete && _isPinnedHere) {
+      body = Row(children: [
+        Icon(Icons.download_done_rounded, color: cs.primary),
+        const SizedBox(width: 8),
+        const Expanded(child: Text('مصحف هذا القارئ محفوظ على الهاتف (يعمل بدون إنترنت)')),
+        TextButton(
+          onPressed: () async {
+            await d.deleteAll();
+            _refreshSaved();
+          },
+          child: const Text('حذف'),
+        ),
+      ]);
+    } else {
+      final partial = _isPinnedHere && _saved.isNotEmpty;
+      body = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (d.error != null && partial) Padding(padding: const EdgeInsets.only(bottom: 6), child: Text(d.error!, style: TextStyle(color: cs.error))),
+        if (_listenSecs >= kRegularListenSeconds && !partial)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 6),
+            child: Text('استمعتَ لهذا القارئ أكثر من ساعة، يمكنك تحميله كاملًا.'),
+          ),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            icon: Icon(partial ? Icons.play_arrow_rounded : Icons.download_rounded),
+            label: Text(partial ? 'متابعة التحميل (${_saved.length} / ${_moshaf.surahs.length})' : 'تحميل مصحف هذا القارئ (Wi-Fi فقط)'),
+            onPressed: partial
+                ? () async {
+                    if (!await QuranDownloader.onWifi()) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('التحميل متاح على Wi-Fi فقط.')));
+                      }
+                      return;
+                    }
+                    d.start(widget.reciter, _moshaf);
+                  }
+                : _startDownload,
+          ),
+        ),
+      ]);
+    }
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Padding(padding: const EdgeInsets.all(12), child: body),
+    );
   }
 
   Future<void> _saveMoshaf(Moshaf m) async =>
@@ -224,17 +358,7 @@ class _ReciterScreenState extends State<ReciterScreen> {
               onChanged: (m) { setState(() => _moshaf = m!); _saveMoshaf(m!); _refreshSaved(); },
             ),
           ),
-        if (AudioStore.supported)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(
-              _listenSecs >= kRegularListenSeconds
-                  ? 'قارئ معتاد عندك: يُحفظ ما تسمعه له على الهاتف للاستماع بدون إنترنت.'
-                  : 'استمعتَ لهذا القارئ ${_listenSecs ~/ 60} دقيقة. بعد ساعة يُحفظ ما تسمعه له على الهاتف.',
-              style: Theme.of(context).textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ),
+        if (AudioStore.supported) ListenableBuilder(listenable: QuranDownloader.instance, builder: (context, _) => _downloadCard(context)),
         Expanded(
           child: ListenableBuilder(
             listenable: player,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../quran/audio_store.dart';
+import '../quran/downloader.dart';
 import '../services/adhan_service.dart';
 import '../settings.dart';
 
@@ -200,28 +201,34 @@ class _SavedAudioTile extends StatefulWidget {
 }
 
 class _SavedAudioTileState extends State<_SavedAudioTile> {
-  late Future<int> _size = AudioStore.totalBytes();
+  late Future<(int, Map<String, dynamic>?)> _info = _load();
+
+  Future<(int, Map<String, dynamic>?)> _load() async => (await AudioStore.totalBytes(), await AudioStore.pinned());
 
   String _fmt(int b) => b < 1024 * 1024 ? '${(b / 1024).round()} ك.ب' : '${(b / 1024 / 1024).toStringAsFixed(1)} م.ب';
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<int>(
-      future: _size,
-      builder: (context, snap) => ListTile(
-        leading: const Icon(Icons.download_done_rounded),
-        title: const Text('تلاوات محفوظة على الهاتف'),
-        subtitle: Text(snap.hasData ? _fmt(snap.data!) : '...'),
-        trailing: TextButton(
-          onPressed: (snap.data ?? 0) == 0
-              ? null
-              : () async {
-                  await AudioStore.clearAll();
-                  if (mounted) setState(() => _size = AudioStore.totalBytes());
-                },
-          child: const Text('حذف'),
-        ),
-      ),
+    return FutureBuilder<(int, Map<String, dynamic>?)>(
+      future: _info,
+      builder: (context, snap) {
+        final size = snap.data?.$1 ?? 0;
+        final name = snap.data?.$2?['name'];
+        return ListTile(
+          leading: const Icon(Icons.download_done_rounded),
+          title: const Text('مصحف محمَّل على الهاتف'),
+          subtitle: Text(!snap.hasData ? '...' : size == 0 ? 'لا يوجد (التحميل من تبويب القرآن ← استماع)' : '${name ?? 'قارئ'} · ${_fmt(size)}'),
+          trailing: TextButton(
+            onPressed: size == 0
+                ? null
+                : () async {
+                    await QuranDownloader.instance.deleteAll();
+                    if (mounted) setState(() => _info = _load());
+                  },
+            child: const Text('حذف'),
+          ),
+        );
+      },
     );
   }
 }

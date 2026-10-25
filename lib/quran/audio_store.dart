@@ -53,6 +53,27 @@ class AudioStore {
     return out;
   }
 
+  /// قارئ واحد فقط: يحذف كل ما حُفظ لغير هذا القارئ/الرواية.
+  static Future<void> keepOnly(Reciter r, Moshaf m) async {
+    if (!supported) return;
+    final prefix = _prefix(r, m);
+    await for (final e in (await _root()).list()) {
+      if (e is File && !e.uri.pathSegments.last.startsWith(prefix)) await e.delete();
+    }
+  }
+
+  static const _pinKey = 'pinned_reciter_v1';
+
+  static Future<void> setPinned(Reciter r, Moshaf m) async =>
+      (await SharedPreferences.getInstance()).setString(_pinKey, jsonEncode({'id': r.id, 'name': r.name, 'm': m.name}));
+
+  static Future<Map<String, dynamic>?> pinned() async {
+    final raw = (await SharedPreferences.getInstance()).getString(_pinKey);
+    return raw == null ? null : (jsonDecode(raw) as Map).cast<String, dynamic>();
+  }
+
+  static Future<void> clearPinned() async => (await SharedPreferences.getInstance()).remove(_pinKey);
+
   static Future<int> totalBytes() async {
     if (!supported) return 0;
     var sum = 0;
@@ -68,6 +89,7 @@ class AudioStore {
     await for (final e in root.list()) {
       if (e is File) await e.delete();
     }
+    await clearPinned();
   }
 
   // ---------------- مدة الاستماع ----------------
