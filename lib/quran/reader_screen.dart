@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'khatma.dart';
+import 'reading_stats.dart';
 import 'listen_screen.dart' show PlayerBar;
 import 'player.dart';
 import 'timings.dart';
@@ -138,7 +139,8 @@ class SurahReaderScreen extends StatefulWidget {
   State<SurahReaderScreen> createState() => _SurahReaderScreenState();
 }
 
-class _SurahReaderScreenState extends State<SurahReaderScreen> {
+class _SurahReaderScreenState extends State<SurahReaderScreen>
+    with WidgetsBindingObserver {
   static const _kFont = 'quran_font_size';
   static const _kFamily = 'quran_font_family';
   double _size = 26;
@@ -147,6 +149,10 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   final _scroll = ScrollController();
   final _keys = <int, GlobalKey>{};
   StreamSubscription<Duration>? _posSub;
+  // عدّاد وقت القراءة: يعدّ فقط والتطبيق أمامك وبعد لمس حديث (أو تلاوة شغّالة تتابع نصها).
+  Timer? _readTimer;
+  DateTime _lastTouch = DateTime.now();
+  bool _foreground = true;
   late int _s = widget.surah; // السورة المعروضة (تتبع المشغّل في وضع المتابعة)
   int _current = -1; // فهرس الآية الحالية (من 0)
   List<int>? _cum; // الأطوال التراكمية للنص لتقدير موضع التلاوة
@@ -166,6 +172,13 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
           if (f != null) _family = f;
         });
       }
+    });
+    WidgetsBinding.instance.addObserver(this);
+    _readTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      final p = QuranPlayer.instance;
+      final listening = widget.follow && p.playing && p.surah == _s;
+      final touched = DateTime.now().difference(_lastTouch).inMinutes < 3;
+      if (_foreground && (touched || listening)) ReadingStats.instance.add(5);
     });
     Khatma.instance.load().then((_) {
       if (mounted) setState(() {});
@@ -269,7 +282,16 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    if (!_foreground) ReadingStats.instance.flush();
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _readTimer?.cancel();
+    ReadingStats.instance.flush();
     _posSub?.cancel();
     if (widget.follow) QuranPlayer.instance.removeListener(_onPlayer);
     _scroll.dispose();
@@ -369,61 +391,66 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
       ),
       // ListView.builder يبني الآيات الظاهرة فقط، فيبقى خفيفًا على الهواتف.
       bottomNavigationBar: widget.follow ? const PlayerBar() : null,
-      body: ValueListenableBuilder<Bookmark?>(
-        valueListenable: Khatma.instance.mark,
-        builder: (context, _, __) => ListView.builder(
-          controller: _scroll,
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          itemCount: count,
-          itemBuilder: (context, i) {
-            final v = i + 1;
-            final active = widget.follow && i == _current;
-            final red = Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFFFF6B6B)
-                : const Color(0xFFD32F2F);
-            final mk = Khatma.instance.mark.value;
-            final marked = mk != null && mk.surah == s && mk.verse == v;
-            final gold = Theme.of(context).colorScheme.tertiary;
-            return Padding(
-              key: _keys[i] ??= GlobalKey(),
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(10),
-                onTap: () => _verseMenu(v),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: marked
-                      ? BoxDecoration(
-                          color: gold.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(10))
-                      : null,
-                  child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (marked)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 14, left: 6),
-                            child: Icon(Icons.bookmark_rounded, color: gold),
-                          ),
-                        Expanded(
-                          child: Text(
-                            '${QuranData.verse(s, v)} ${QuranData.endMark(v)}',
-                            textAlign: TextAlign.justify,
-                            style: TextStyle(
-                              fontFamily: _family,
-                              fontSize: _size,
-                              height: _family == 'NotoNaskh' ? 1.9 : 2,
-                              color: active ? red : null,
-                              fontWeight: active ? FontWeight.w700 : null,
+      body: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) => _lastTouch = DateTime.now(),
+        onPointerMove: (_) => _lastTouch = DateTime.now(),
+        child: ValueListenableBuilder<Bookmark?>(
+          valueListenable: Khatma.instance.mark,
+          builder: (context, _, __) => ListView.builder(
+            controller: _scroll,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            itemCount: count,
+            itemBuilder: (context, i) {
+              final v = i + 1;
+              final active = widget.follow && i == _current;
+              final red = Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFFFF6B6B)
+                  : const Color(0xFFD32F2F);
+              final mk = Khatma.instance.mark.value;
+              final marked = mk != null && mk.surah == s && mk.verse == v;
+              final gold = Theme.of(context).colorScheme.tertiary;
+              return Padding(
+                key: _keys[i] ??= GlobalKey(),
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () => _verseMenu(v),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: marked
+                        ? BoxDecoration(
+                            color: gold.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(10))
+                        : null,
+                    child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (marked)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 14, left: 6),
+                              child: Icon(Icons.bookmark_rounded, color: gold),
+                            ),
+                          Expanded(
+                            child: Text(
+                              '${QuranData.verse(s, v)} ${QuranData.endMark(v)}',
+                              textAlign: TextAlign.justify,
+                              style: TextStyle(
+                                fontFamily: _family,
+                                fontSize: _size,
+                                height: _family == 'NotoNaskh' ? 1.9 : 2,
+                                color: active ? red : null,
+                                fontWeight: active ? FontWeight.w700 : null,
+                              ),
                             ),
                           ),
-                        ),
-                      ]),
+                        ]),
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

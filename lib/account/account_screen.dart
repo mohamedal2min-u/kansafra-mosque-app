@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../donors/donors_repository.dart';
 import 'history_api.dart';
 import 'identity.dart';
+import '../quran/reading_stats.dart';
 
 String _when(DateTime d) {
   final l = d.toLocal();
@@ -71,6 +72,7 @@ class _AccountScreenState extends State<AccountScreen> {
               const TabBar(tabs: [Tab(text: 'تبرعاتي'), Tab(text: 'رسائلي')]),
         ),
         body: Column(children: [
+          const _ReadingCard(),
           ListenableBuilder(
             listenable: _id,
             builder: (context, _) => Card(
@@ -215,5 +217,94 @@ class _Messages extends StatelessWidget {
           ),
         ),
     ]);
+  }
+}
+
+/// وقت قراءة القرآن في المصحف: اليوم وهذا الأسبوع والإجمالي وأيام القراءة المتتالية.
+class _ReadingCard extends StatelessWidget {
+  const _ReadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return FutureBuilder<void>(
+      future: ReadingStats.instance.load(),
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done)
+          return const SizedBox.shrink();
+        final st = ReadingStats.instance;
+        final week = st.lastWeek;
+        final maxV = week.fold<int>(1, (a, b) => b > a ? b : a);
+        Widget stat(String label, String value) => Expanded(
+              child: Column(children: [
+                Text(value,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                    textAlign: TextAlign.center),
+                const SizedBox(height: 2),
+                Text(label, style: Theme.of(context).textTheme.bodySmall),
+              ]),
+            );
+        return Card(
+          margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(Icons.auto_stories_rounded, color: cs.primary),
+                const SizedBox(width: 8),
+                Text('وقت قراءتي للقرآن',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+              ]),
+              const SizedBox(height: 10),
+              Row(children: [
+                stat('اليوم', ReadingStats.format(st.today)),
+                stat('آخر 7 أيام', ReadingStats.format(st.week)),
+                stat('الإجمالي', ReadingStats.format(st.total)),
+              ]),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 36,
+                child:
+                    Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  for (final v in week)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        child: Container(
+                          height: 4 + 32 * (v / maxV),
+                          decoration: BoxDecoration(
+                            color: v == 0 ? cs.outlineVariant : cs.primary,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                    ),
+                ]),
+              ),
+              if (st.streak > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                      '${st.streak} ${st.streak == 1 ? 'يوم' : 'أيام'} متتالية من القراءة',
+                      style: TextStyle(
+                          color: cs.tertiary, fontWeight: FontWeight.w700)),
+                ),
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text('يُحسب الوقت وشاشة القراءة مفتوحة والتطبيق أمامك.',
+                    style: Theme.of(context).textTheme.bodySmall),
+              ),
+            ]),
+          ),
+        );
+      },
+    );
   }
 }
