@@ -87,7 +87,7 @@ class AdhanService {
         final at = tz.TZDateTime.from(PrayerCalc.adjusted(e.key, e.value), tz.local);
         id++;
         if (at.isBefore(now)) continue;
-        final raw = sound.rawNameFor(e.key);
+        final raw = sound.rawNameFor(e.key, at.millisecondsSinceEpoch ~/ 86400000);
         await _plugin.zonedSchedule(
           id,
           'حان الآن موعد أذان ${PrayerCalc.names[e.key]}',

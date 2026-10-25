@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'adhan_extra.g.dart';
+
 /// مؤذن مضمّن في التطبيق. لإضافة مؤذن: ضع الملفين adhan_<raw>_long.mp3 و adhan_<raw>_short.mp3
 /// في assets/adhan/ وفي android/app/src/main/res/raw/ ثم أضف سطرًا هنا.
 class AdhanVoice {
@@ -8,17 +10,25 @@ class AdhanVoice {
   final String raw; // أحرف إنجليزية صغيرة وأرقام فقط
   final String name;
   final String credit; // الترخيص والمؤلف (ملف assets/adhan/CREDITS.md)
-  const AdhanVoice(this.id, this.raw, this.name, this.credit);
+  final bool hasLong; // بعض المؤذنين المضافين آليًا لهم نسخة قصيرة فقط
+  final bool inAuto; // يدخل في الوضع التلقائي (مؤذن لكل صلاة)
+  const AdhanVoice(this.id, this.raw, this.name, this.credit, {this.hasLong = true, this.inAuto = true});
 
-  String rawName(bool long) => 'adhan_${raw}_${long ? 'long' : 'short'}';
+  String rawName(bool long) => 'adhan_${raw}_${long && hasLong ? 'long' : 'short'}';
   String asset(bool long) => 'assets/adhan/${rawName(long)}.mp3';
 }
 
-const adhanVoices = <AdhanVoice>[
-  AdhanVoice('voice1', 'v1', 'أذان هادئ', 'Adam-synagda - CC0'),
-  AdhanVoice('voice2', 'v2', 'أذان مختصر', 'ملكية عامة'),
-  AdhanVoice('voice3', 'v3', 'عاقب عزيز', 'Atcovi - CC BY-SA 4.0'),
-  AdhanVoice('voice4', 'v4', 'الحرم المكي (2013)', 'Seyfula Islam - CC BY 3.0'),
+const _baseVoices = <AdhanVoice>[
+  AdhanVoice('voice1', 'v1', 'أذان هادئ', 'Adam-synagda - CC0 (Wikimedia Commons)'),
+  AdhanVoice('voice2', 'v2', 'أذان مختصر', 'ملكية عامة (Wikimedia Commons)'),
+  AdhanVoice('voice3', 'v3', 'عاقب عزيز', 'Atcovi - CC BY-SA 4.0 (Wikimedia Commons)'),
+  AdhanVoice('voice4', 'v4', 'الحرم المكي (2013)', 'Seyfula Islam - CC BY 3.0 (Wikimedia Commons)'),
+];
+
+/// المؤذنون المضافون آليًا من Internet Archive (ملف lib/adhan_extra.g.dart يولّده tools/fetch_adhan.py).
+final adhanVoices = <AdhanVoice>[
+  ..._baseVoices,
+  for (final d in extraAdhanData) AdhanVoice(d[0], d[1], d[2], d[3], hasLong: false, inAuto: d[4] == '1'),
 ];
 
 /// اختيار المستخدم لصوت التنبيه. [voice] فارغ مع [auto] خطأ يعني صوت الإشعار العادي.
@@ -35,12 +45,17 @@ class AdhanChoice {
       ? 'تلقائي: مؤذن مختلف لكل صلاة (${long ? 'كامل' : 'قصير'})'
       : voice == null ? 'صوت الإشعار العادي' : '${voice!.name} (${long ? 'كامل' : 'قصير'})';
 
-  /// المؤذن الذي يُنادى به لهذه الصلاة في الوضع التلقائي.
-  AdhanVoice voiceFor(String prayer) =>
-      adhanVoices[prayers.indexOf(prayer).clamp(0, prayers.length - 1) % adhanVoices.length];
+  /// المؤذن لهذه الصلاة في الوضع التلقائي: خمسة مؤذنين مختلفين كل يوم، ويتبدّلون من يوم لآخر
+  /// فيمرّ التطبيق على كل المؤذنين المضمّنين. [epochDay] = رقم اليوم منذ 1970.
+  AdhanVoice voiceFor(String prayer, int epochDay) {
+    final pool = adhanVoices.where((v) => v.inAuto).toList();
+    final i = prayers.indexOf(prayer).clamp(0, prayers.length - 1);
+    return pool[(epochDay * prayers.length + i) % pool.length];
+  }
 
   /// اسم ملف الصوت لهذه الصلاة (null = صوت الإشعار العادي).
-  String? rawNameFor(String prayer) => auto ? voiceFor(prayer).rawName(long) : voice?.rawName(long);
+  String? rawNameFor(String prayer, int epochDay) =>
+      auto ? voiceFor(prayer, epochDay).rawName(long) : voice?.rawName(long);
 }
 
 class AppSettings {

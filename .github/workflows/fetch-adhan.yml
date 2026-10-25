@@ -1,0 +1,26 @@
+name: fetch-adhan
+on:
+  workflow_dispatch:
+    inputs:
+      count:
+        description: عدد المؤذنين المطلوب
+        default: '30'
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Fetch adhan recordings
+        run: python3 tools/fetch_adhan.py "${{ inputs.count }}"
+      - name: Commit to adhan-candidates branch
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -b adhan-candidates
+          git add -A
+          git commit -m "Add adhan voices fetched from Internet Archive"
+          git push -f origin adhan-candidates

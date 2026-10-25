@@ -169,7 +169,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
         child: Column(children: [
           const RadioListTile<String>(
             title: Text('تلقائي (موصى به)'),
-            subtitle: Text('مؤذن مختلف لكل صلاة'),
+            subtitle: Text('مؤذن مختلف لكل صلاة، ويتبدّل كل يوم'),
             value: 'auto',
           ),
           for (final v in adhanVoices)
@@ -190,7 +190,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
         title: const Text('مصادر تسجيلات الأذان'),
         children: [
           for (final v in adhanVoices)
-            ListTile(dense: true, title: Text(v.name), subtitle: Text('${v.credit} (Wikimedia Commons)')),
+            ListTile(dense: true, title: Text(v.name), subtitle: Text(v.credit)),
         ],
       ),
     ]);
