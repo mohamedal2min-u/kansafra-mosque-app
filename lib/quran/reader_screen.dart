@@ -175,10 +175,10 @@ class _SurahReaderScreenState extends State<SurahReaderScreen>
     });
     WidgetsBinding.instance.addObserver(this);
     _readTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      final p = QuranPlayer.instance;
-      final listening = widget.follow && p.playing && p.surah == _s;
-      final touched = DateTime.now().difference(_lastTouch).inMinutes < 3;
-      if (_foreground && (touched || listening)) ReadingStats.instance.add(5);
+      // يُحسب الوقت فقط إن تحرّكت الشاشة (لمس أو تمرير، ومنه التمرير التلقائي مع التلاوة)
+      // خلال آخر دقيقتين، والتطبيق أمامك.
+      final moved = DateTime.now().difference(_lastTouch).inSeconds < 120;
+      if (_foreground && moved) ReadingStats.instance.add(5);
     });
     Khatma.instance.load().then((_) {
       if (mounted) setState(() {});
@@ -395,61 +395,69 @@ class _SurahReaderScreenState extends State<SurahReaderScreen>
         behavior: HitTestBehavior.translucent,
         onPointerDown: (_) => _lastTouch = DateTime.now(),
         onPointerMove: (_) => _lastTouch = DateTime.now(),
-        child: ValueListenableBuilder<Bookmark?>(
-          valueListenable: Khatma.instance.mark,
-          builder: (context, _, __) => ListView.builder(
-            controller: _scroll,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-            itemCount: count,
-            itemBuilder: (context, i) {
-              final v = i + 1;
-              final active = widget.follow && i == _current;
-              final red = Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFFFF6B6B)
-                  : const Color(0xFFD32F2F);
-              final mk = Khatma.instance.mark.value;
-              final marked = mk != null && mk.surah == s && mk.verse == v;
-              final gold = Theme.of(context).colorScheme.tertiary;
-              return Padding(
-                key: _keys[i] ??= GlobalKey(),
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: () => _verseMenu(v),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: marked
-                        ? BoxDecoration(
-                            color: gold.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(10))
-                        : null,
-                    child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (marked)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 14, left: 6),
-                              child: Icon(Icons.bookmark_rounded, color: gold),
-                            ),
-                          Expanded(
-                            child: Text(
-                              '${QuranData.verse(s, v)} ${QuranData.endMark(v)}',
-                              textAlign: TextAlign.justify,
-                              style: TextStyle(
-                                fontFamily: _family,
-                                fontSize: _size,
-                                height: _family == 'NotoNaskh' ? 1.9 : 2,
-                                color: active ? red : null,
-                                fontWeight: active ? FontWeight.w700 : null,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (_) {
+            _lastTouch = DateTime.now();
+            return false;
+          },
+          child: ValueListenableBuilder<Bookmark?>(
+            valueListenable: Khatma.instance.mark,
+            builder: (context, _, __) => ListView.builder(
+              controller: _scroll,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              itemCount: count,
+              itemBuilder: (context, i) {
+                final v = i + 1;
+                final active = widget.follow && i == _current;
+                final red = Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFFFF6B6B)
+                    : const Color(0xFFD32F2F);
+                final mk = Khatma.instance.mark.value;
+                final marked = mk != null && mk.surah == s && mk.verse == v;
+                final gold = Theme.of(context).colorScheme.tertiary;
+                return Padding(
+                  key: _keys[i] ??= GlobalKey(),
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => _verseMenu(v),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: marked
+                          ? BoxDecoration(
+                              color: gold.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(10))
+                          : null,
+                      child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (marked)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.only(top: 14, left: 6),
+                                child:
+                                    Icon(Icons.bookmark_rounded, color: gold),
+                              ),
+                            Expanded(
+                              child: Text(
+                                '${QuranData.verse(s, v)} ${QuranData.endMark(v)}',
+                                textAlign: TextAlign.justify,
+                                style: TextStyle(
+                                  fontFamily: _family,
+                                  fontSize: _size,
+                                  height: _family == 'NotoNaskh' ? 1.9 : 2,
+                                  color: active ? red : null,
+                                  fontWeight: active ? FontWeight.w700 : null,
+                                ),
                               ),
                             ),
-                          ),
-                        ]),
+                          ]),
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),

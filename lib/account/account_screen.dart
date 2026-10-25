@@ -265,7 +265,8 @@ class _ReadingCard extends StatelessWidget {
               const SizedBox(height: 10),
               Row(children: [
                 stat('اليوم', ReadingStats.format(st.today)),
-                stat('آخر 7 أيام', ReadingStats.format(st.week)),
+                stat('هذا الشهر', ReadingStats.format(st.thisMonth)),
+                stat('هذه السنة', ReadingStats.format(st.thisYear)),
                 stat('الإجمالي', ReadingStats.format(st.total)),
               ]),
               const SizedBox(height: 10),
@@ -305,6 +306,86 @@ class _ReadingCard extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// تفاصيل وقت القراءة: لكل يوم (آخر 30 يومًا) ولكل شهر ولكل سنة.
+class ReadingHistoryScreen extends StatefulWidget {
+  const ReadingHistoryScreen({super.key});
+
+  @override
+  State<ReadingHistoryScreen> createState() => _ReadingHistoryScreenState();
+}
+
+class _ReadingHistoryScreenState extends State<ReadingHistoryScreen> {
+  static const _months = [
+    'يناير',
+    'فبراير',
+    'مارس',
+    'أبريل',
+    'مايو',
+    'يونيو',
+    'يوليو',
+    'أغسطس',
+    'سبتمبر',
+    'أكتوبر',
+    'نوفمبر',
+    'ديسمبر'
+  ];
+  int _mode = 0; // 0 يومي، 1 شهري، 2 سنوي
+
+  @override
+  Widget build(BuildContext context) {
+    final st = ReadingStats.instance;
+    final rows = <(String, int)>[];
+    if (_mode == 0) {
+      for (final e in st.lastDays(30)) {
+        rows.add((DateFormat.yMMMEd('ar').format(e.key), e.value));
+      }
+    } else if (_mode == 1) {
+      for (final e in st.monthList) {
+        rows.add(('${_months[e.key.$2 - 1]} ${e.key.$1}', e.value));
+      }
+    } else {
+      for (final e in st.yearList) {
+        rows.add(('${e.key}', e.value));
+      }
+    }
+    return Scaffold(
+      appBar: AppBar(title: const Text('وقت قراءتي للقرآن')),
+      body: Column(children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: SegmentedButton<int>(
+            segments: const [
+              ButtonSegment(value: 0, label: Text('يومي')),
+              ButtonSegment(value: 1, label: Text('شهري')),
+              ButtonSegment(value: 2, label: Text('سنوي')),
+            ],
+            selected: {_mode},
+            onSelectionChanged: (v) => setState(() => _mode = v.first),
+          ),
+        ),
+        Expanded(
+          child: rows.isEmpty
+              ? const Center(child: Text('لا توجد قراءة مسجَّلة بعد.'))
+              : ListView.separated(
+                  itemCount: rows.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (_, i) => ListTile(
+                    title: Text(rows[i].$1),
+                    trailing: Text(ReadingStats.format(rows[i].$2),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: rows[i].$2 == 0
+                              ? Theme.of(context).disabledColor
+                              : null,
+                        )),
+                  ),
+                ),
+        ),
+      ]),
     );
   }
 }
