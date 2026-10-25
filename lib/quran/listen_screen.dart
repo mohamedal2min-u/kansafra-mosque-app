@@ -120,7 +120,10 @@ class _ListenScreenState extends State<ListenScreen> {
                     avatar: Icon(Icons.star_rounded, size: 18, color: Theme.of(context).colorScheme.tertiary),
                     label: const Text('المفضلة'),
                     selected: _onlyFav,
-                    onSelected: (v) => setState(() => _onlyFav = v),
+                    onSelected: (v) => setState(() {
+                      _onlyFav = v;
+                      if (v) _tag = ReciterTag.all;
+                    }),
                   ),
                 ),
                 for (final t in ReciterTag.values)
@@ -128,8 +131,11 @@ class _ListenScreenState extends State<ListenScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                     child: ChoiceChip(
                       label: Text(t.label),
-                      selected: _tag == t,
-                      onSelected: (_) => setState(() => _tag = t),
+                      selected: !_onlyFav && _tag == t,
+                      onSelected: (_) => setState(() {
+                        _tag = t;
+                        _onlyFav = false;
+                      }),
                     ),
                   ),
               ],

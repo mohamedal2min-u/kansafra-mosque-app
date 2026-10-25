@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:just_audio_background/just_audio_background.dart';
 
 import '../quran/audio_store.dart';
 import 'adhan_catalog_screen.dart';
 import '../quran/downloader.dart';
+import '../quran/player.dart';
 import '../services/adhan_service.dart';
 import '../settings.dart';
 
@@ -19,8 +19,6 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
   AdhanPermissions? _perm;
   AdhanChoice _choice = const AdhanChoice(null, false, auto: true);
   bool _enabled = true;
-  AudioPlayer? _player; // يُنشأ عند أول استماع فقط
-  String? _playingId;
 
   @override
   void initState() {
@@ -48,7 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _player?.dispose();
+    if (QuranPlayer.instance.previewId != null) QuranPlayer.instance.stop();
     super.dispose();
   }
 
@@ -59,19 +57,15 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
   }
 
   Future<void> _preview(AdhanVoice v) async {
+    final p = QuranPlayer.instance;
     final id = '${v.id}_${_choice.long}';
-    if (_playingId == id) {
-      await _player?.stop();
-      setState(() => _playingId = null);
+    if (p.previewId == id) {
+      await p.stop();
       return;
     }
-    setState(() => _playingId = id);
     try {
-      final player = _player ??= AudioPlayer();
-      await player.setAudioSource(AudioSource.asset(v.asset(_choice.long), tag: MediaItem(id: v.id, title: v.name, album: 'الأذان')));
-      await player.play();
+      await p.preview(id, v.name, (tag) => AudioSource.asset(v.asset(_choice.long), tag: tag));
     } catch (_) {}
-    if (mounted) setState(() => _playingId = null);
   }
 
   @override
@@ -178,10 +172,13 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
             RadioListTile<String>(
               title: Text(v.name),
               value: v.id,
-              secondary: IconButton(
-                icon: Icon(_playingId == '${v.id}_${_choice.long}' ? Icons.stop_circle : Icons.play_circle, size: 34),
-                tooltip: 'استماع',
-                onPressed: () => _preview(v),
+              secondary: ListenableBuilder(
+                listenable: QuranPlayer.instance,
+                builder: (_, __) => IconButton(
+                  icon: Icon(QuranPlayer.instance.previewId == '${v.id}_${_choice.long}' ? Icons.stop_circle : Icons.play_circle, size: 34),
+                  tooltip: 'استماع',
+                  onPressed: () => _preview(v),
+                ),
               ),
             ),
           const RadioListTile<String>(title: Text('صوت الإشعار العادي'), value: 'default'),

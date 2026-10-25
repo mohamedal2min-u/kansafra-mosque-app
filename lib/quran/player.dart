@@ -12,7 +12,13 @@ import 'reciters.dart';
 class QuranPlayer extends ChangeNotifier {
   QuranPlayer._() {
     _audio.playerStateStream.listen((s) {
-      if (s.processingState == ProcessingState.completed) next();
+      if (s.processingState == ProcessingState.completed) {
+        if (previewId != null) {
+          previewId = null; // انتهت معاينة الأذان
+        } else {
+          next();
+        }
+      }
       notifyListeners();
     });
     // نقيس مدة الاستماع لكل قارئ (كل 10 ثوانٍ أثناء التشغيل).
@@ -28,13 +34,30 @@ class QuranPlayer extends ChangeNotifier {
   Moshaf? moshaf;
   int? surah;
   String? error;
+  String? previewId; // معاينة أذان جارية (تستعمل المشغّل نفسه)
 
   bool get playing => _audio.playing;
   Stream<Duration> get position => _audio.positionStream;
   Duration? get duration => _audio.duration;
   Future<void> seek(Duration d) => _audio.seek(d);
 
+  /// معاينة مقطع أذان على المشغّل نفسه: just_audio_background يدعم مشغّلًا واحدًا فقط في التطبيق.
+  Future<void> preview(String id, String title, AudioSource Function(MediaItem tag) build) async {
+    await stop();
+    previewId = id;
+    notifyListeners();
+    try {
+      await _audio.setAudioSource(build(MediaItem(id: 'preview_$id', title: title, album: 'الأذان')));
+      await _audio.play();
+    } catch (_) {
+      previewId = null;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   Future<void> play(Reciter r, Moshaf m, int s) async {
+    previewId = null;
     reciter = r;
     moshaf = m;
     surah = s;
@@ -61,6 +84,7 @@ class QuranPlayer extends ChangeNotifier {
   /// إيقاف نهائي وإخفاء شريط التشغيل.
   Future<void> stop() async {
     await _audio.stop();
+    previewId = null;
     surah = null;
     moshaf = null;
     reciter = null;

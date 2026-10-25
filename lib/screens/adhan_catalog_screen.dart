@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:just_audio/just_audio.dart';
-import 'package:just_audio_background/just_audio_background.dart';
-
 import '../adhan/adhan_catalog.dart';
+import '../quran/player.dart';
 import '../settings.dart';
 
 /// مؤذنون أونلاين: استمع من الإنترنت، وعند الاختيار يُحمَّل المقطع على الهاتف ويُعتمد للأذان.
@@ -22,10 +21,8 @@ class _AdhanCatalogScreenState extends State<AdhanCatalogScreen> {
   Set<String> _downloaded = {};
   String _query = '';
   bool _onlyFajr = false;
-  String? _playingId;
   String? _busyId;
   String? _currentId;
-  AudioPlayer? _player; // يُنشأ عند أول استماع
 
   @override
   void initState() {
@@ -38,7 +35,7 @@ class _AdhanCatalogScreenState extends State<AdhanCatalogScreen> {
 
   @override
   void dispose() {
-    _player?.dispose();
+    if (QuranPlayer.instance.previewId != null) QuranPlayer.instance.stop();
     super.dispose();
   }
 
@@ -46,25 +43,18 @@ class _AdhanCatalogScreenState extends State<AdhanCatalogScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t)));
 
   Future<void> _preview(OnlineAdhan v) async {
-    if (_playingId == v.id) {
-      await _player?.stop();
-      if (mounted) setState(() => _playingId = null);
+    final p = QuranPlayer.instance;
+    if (p.previewId == v.id) {
+      await p.stop();
       return;
     }
-    setState(() => _playingId = v.id);
     try {
-      final player = _player ??= AudioPlayer();
-      final tag = MediaItem(id: v.id, title: v.name, album: 'الأذان');
       final f = await AdhanCatalog.file(v);
       final local = _downloaded.contains(v.id) && await f.exists();
-      await player.setAudioSource(local
-          ? AudioSource.file(f.path, tag: tag)
-          : AudioSource.uri(Uri.parse(v.url), tag: tag));
-      await player.play();
-    } catch (_) {
-      if (mounted) _msg('تعذّر تشغيل الصوت. تأكد من الاتصال بالإنترنت.');
+      await p.preview(v.id, v.name, (tag) => local ? AudioSource.file(f.path, tag: tag) : AudioSource.uri(Uri.parse(v.url), tag: tag));
+    } catch (e) {
+      if (mounted) _msg('تعذّر تشغيل الصوت: ${'$e'.split('\n').first}');
     }
-    if (mounted && _playingId == v.id) setState(() => _playingId = null);
   }
 
   Future<void> _choose(OnlineAdhan v) async {
@@ -170,13 +160,16 @@ class _AdhanCatalogScreenState extends State<AdhanCatalogScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 2),
                           child: Row(children: [
-                            IconButton(
-                              iconSize: 34,
-                              tooltip: 'استماع',
-                              icon: Icon(_playingId == v.id
-                                  ? Icons.stop_circle
-                                  : Icons.play_circle),
-                              onPressed: () => _preview(v),
+                            ListenableBuilder(
+                              listenable: QuranPlayer.instance,
+                              builder: (_, __) => IconButton(
+                                iconSize: 34,
+                                tooltip: 'استماع',
+                                icon: Icon(QuranPlayer.instance.previewId == v.id
+                                    ? Icons.stop_circle
+                                    : Icons.play_circle),
+                                onPressed: () => _preview(v),
+                              ),
                             ),
                             Expanded(
                               child: Column(
