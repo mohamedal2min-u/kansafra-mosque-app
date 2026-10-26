@@ -234,7 +234,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                   await Clipboard.setData(ClipboardData(text: _report()));
                   if (mounted) _msg('نُسخ التقرير. الصقه في محادثة ماسنجر');
                   await Launcher.openUrl(MosqueConfig.messengerUrl,
-                      packages: MosqueConfig.messengerPackages);
+                      packages: MosqueConfig.messengerPackages,
+                      appUrl: MosqueConfig.messengerAppUrl);
                 },
                 icon: const Icon(Icons.send_rounded),
                 label: const Text('إرسال للدعم عبر ماسنجر'),

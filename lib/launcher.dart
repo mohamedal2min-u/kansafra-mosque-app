@@ -9,12 +9,13 @@ class Launcher {
   /// الروابط الخارجية تعمل على الهاتف فقط.
   static bool get supported => !kIsWeb;
 
-  /// يفتح الرابط في أول تطبيق مثبّت من [packages] مباشرة، وإلا المتصفح.
+  /// يفتح [appUrl] (رابط التطبيق المباشر، مثل fb://) إن أمكن، وإلا الرابط في أول تطبيق
+  /// مثبّت من [packages]، وإلا المتصفح.
   static Future<bool> openUrl(String url,
-      {List<String> packages = const []}) async {
+      {List<String> packages = const [], String? appUrl}) async {
     try {
-      return await _channel.invokeMethod<bool>(
-              'openUrl', {'url': url, 'packages': packages}) ??
+      return await _channel.invokeMethod<bool>('openUrl',
+              {'url': url, 'packages': packages, 'appUrl': appUrl}) ??
           false;
     } catch (_) {
       return false;
@@ -26,7 +27,9 @@ class Launcher {
   /// يفتح الرابط مع إشارة فورية للمستخدم (تطبيق فيسبوك/ماسنجر قد يحتاج ثوانيَ ليفتح)،
   /// ويتجاهل الضغطات المتكررة أثناء الفتح.
   static Future<void> openWithFeedback(BuildContext context, String url,
-      {List<String> packages = const [], String label = 'الرابط'}) async {
+      {List<String> packages = const [],
+      String? appUrl,
+      String label = 'الرابط'}) async {
     if (_opening) return;
     _opening = true;
     final messenger = ScaffoldMessenger.of(context);
@@ -34,7 +37,7 @@ class Launcher {
         content: Text('جارٍ فتح $label…'),
         duration: const Duration(seconds: 2)));
     try {
-      final ok = await openUrl(url, packages: packages);
+      final ok = await openUrl(url, packages: packages, appUrl: appUrl);
       if (!ok) {
         messenger.hideCurrentSnackBar();
         messenger

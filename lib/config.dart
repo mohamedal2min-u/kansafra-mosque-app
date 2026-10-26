@@ -11,6 +11,12 @@ class MosqueConfig {
   static const facebookPackages = ['com.facebook.katana', 'com.facebook.lite'];
   static const facebookUrl = 'https://www.facebook.com/kansafra.mosque/';
 
+  /// رقم صفحة المسجد على فيسبوك. روابط التطبيق بالرقم تفتح الصفحة فورًا، أما رابط الاسم
+  /// (kansafra.mosque) فيبحث عنه فيسبوك/ماسنجر عبر الإنترنت أولًا فيتأخر ثوانيَ.
+  static const facebookPageId = '61595553612392';
+  static const messengerAppUrl = 'fb-messenger://user-thread/$facebookPageId';
+  static const facebookAppUrl = 'fb://profile/$facebookPageId';
+
   /// كتالوج الأذان الأونلاين (catalog.json والمقاطع) المنشور من مجلد docs/adhan في المستودع.
   static const adhanCatalogBase =
       'https://raw.githubusercontent.com/mohamedal2min-u/kansafra-mosque-app/main/docs/adhan';

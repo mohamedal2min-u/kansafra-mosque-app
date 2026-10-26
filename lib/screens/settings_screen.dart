@@ -435,7 +435,9 @@ class _SettingsScreenState extends State<SettingsScreen>
           trailing: const Icon(Icons.open_in_new_rounded),
           onTap: () => Launcher.openWithFeedback(
               context, MosqueConfig.facebookUrl,
-              packages: MosqueConfig.facebookPackages, label: 'صفحة فيسبوك'),
+              packages: MosqueConfig.facebookPackages,
+              appUrl: MosqueConfig.facebookAppUrl,
+              label: 'صفحة فيسبوك'),
         ),
       ListTile(
         leading: const Icon(Icons.health_and_safety_rounded),

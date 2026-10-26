@@ -51,6 +51,7 @@ class SupportScreen extends StatelessWidget {
                     onPressed: () => Launcher.openWithFeedback(
                         context, MosqueConfig.messengerUrl,
                         packages: MosqueConfig.messengerPackages,
+                        appUrl: MosqueConfig.messengerAppUrl,
                         label: 'ماسنجر'),
                   ),
                 ),
@@ -69,6 +70,7 @@ class SupportScreen extends StatelessWidget {
               onTap: () => Launcher.openWithFeedback(
                   context, MosqueConfig.facebookUrl,
                   packages: MosqueConfig.facebookPackages,
+                  appUrl: MosqueConfig.facebookAppUrl,
                   label: 'صفحة فيسبوك'),
             ),
           ),

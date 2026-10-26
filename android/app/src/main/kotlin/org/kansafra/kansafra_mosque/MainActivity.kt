@@ -66,6 +66,18 @@ class MainActivity : AudioServiceActivity() {
                     // نجرّب التطبيق المناسب مباشرة (ماسنجر/فيسبوك) لتجنّب المرور بالمتصفح ثم التحويل، وهو بطيء.
                     val url = call.argument<String>("url") ?: ""
                     val packages = call.argument<List<String>>("packages") ?: emptyList()
+                    // رابط التطبيق المباشر بالرقم (fb://، fb-messenger://) أولًا: يفتح الصفحة فورًا.
+                    val appUrl = call.argument<String>("appUrl")
+                    if (!appUrl.isNullOrEmpty()) {
+                        try {
+                            startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(appUrl))
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                            result.success(true)
+                            return@setMethodCallHandler
+                        } catch (e: Exception) {
+                            // التطبيق غير مثبّت: نكمل بالرابط العادي.
+                        }
+                    }
                     val uri = android.net.Uri.parse(url)
                     var opened = false
                     for (pkg in packages + listOf("")) {
