@@ -48,19 +48,33 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - name: Build APK
+      - name: Build APK (both apps)
         run: |
-          flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64 --split-debug-info=build/symbols --build-name=1.0.0 --build-number=$GITHUB_RUN_NUMBER > build.log 2>&1 && flutter build appbundle --release --split-debug-info=build/symbols --build-name=1.0.0 --build-number=$GITHUB_RUN_NUMBER >> build.log 2>&1 || {
-            msg=$(grep -E "(rror|What went wrong|FAILURE|Could not|requires|not found)" -A3 build.log | head -25 | tr '\n' '|' | cut -c1-1800)
-            echo "::error::BUILD FAILED: $msg"
-            exit 1
-          }
+          # تطبيقان من الكود نفسه: مسجد كنصفرة (kansafra) ورفيق المسلم (rafiq).
+          opts="--release --split-debug-info=build/symbols --build-name=1.0.0 --build-number=$GITHUB_RUN_NUMBER"
+          : > build.log
+          for f in kansafra rafiq; do
+            flutter build apk $opts --flavor $f --split-per-abi --target-platform android-arm,android-arm64 >> build.log 2>&1 &&
+            flutter build appbundle $opts --flavor $f >> build.log 2>&1 || {
+              msg=$(grep -E "(rror|What went wrong|FAILURE|Could not|requires|not found)" -A3 build.log | head -25 | tr '\n' '|' | cut -c1-1800)
+              echo "::error::BUILD FAILED ($f): $msg"
+              exit 1
+            }
+          done
+          # أسماء ثابتة: روابط تطبيق كنصفرة القديمة تبقى كما هي، ورفيق المسلم بأسماء rafiq-*.
+          a=build/app/outputs/flutter-apk; b=build/app/outputs/bundle
+          mkdir -p out
+          cp $a/app-kansafra-arm64-v8a-release.apk out/app-arm64-v8a-release.apk
+          cp $a/app-kansafra-armeabi-v7a-release.apk out/app-armeabi-v7a-release.apk
+          cp $b/kansafraRelease/app-kansafra-release.aab out/app-release.aab
+          cp $a/app-rafiq-arm64-v8a-release.apk out/rafiq-arm64-v8a-release.apk
+          cp $a/app-rafiq-armeabi-v7a-release.apk out/rafiq-armeabi-v7a-release.apk
+          cp $b/rafiqRelease/app-rafiq-release.aab out/rafiq-release.aab
+          ls -la out
       - uses: actions/upload-artifact@v4
         with:
-          name: kansafra-mosque-apk
-          path: |
-            build/app/outputs/flutter-apk/*-release.apk
-            build/app/outputs/bundle/release/app-release.aab
+          name: apps
+          path: out/*
       - name: Publish release with APK
         uses: softprops/action-gh-release@v2
         with:
@@ -68,8 +82,6 @@ jobs:
           name: نسخة تجريبية ${{ github.run_number }}
           prerelease: true
           body: |
-            حمّل **app-arm64-v8a-release.apk** (يناسب معظم الهواتف الحديثة). للهواتف القديمة جدًا: app-armeabi-v7a-release.apk.
-          files: |
-            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-            build/app/outputs/bundle/release/app-release.aab
+            **مسجد كنصفرة الكبير:** app-arm64-v8a-release.apk (للهواتف القديمة جدًا: app-armeabi-v7a-release.apk).
+            **رفيق المسلم:** rafiq-arm64-v8a-release.apk (للهواتف القديمة جدًا: rafiq-armeabi-v7a-release.apk).
+          files: out/*

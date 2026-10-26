@@ -4,7 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'account/account_screen.dart';
 import 'account/identity.dart';
-import 'config.dart';
+import 'flavor.dart';
 import 'settings.dart';
 import 'services/adhan_service.dart';
 import 'services/diag_log.dart';
@@ -123,7 +123,7 @@ class MosqueApp extends StatelessWidget {
       valueListenable: ThemeController.mode,
       builder: (context, mode, _) => MaterialApp(
         themeMode: mode,
-        title: MosqueConfig.name,
+        title: AppFlavor.appName,
         debugShowCheckedModeBanner: false,
         locale: const Locale('ar'),
         supportedLocales: const [Locale('ar')],
@@ -200,7 +200,7 @@ class _HomeShellState extends State<HomeShell> {
     final donating = _index == _donate;
     return Scaffold(
       appBar: AppBar(
-        title: const Text(MosqueConfig.name),
+        title: const Text(AppFlavor.appName),
         leading: IconButton(
           icon: Icon(Theme.of(context).brightness == Brightness.dark
               ? Icons.light_mode_rounded

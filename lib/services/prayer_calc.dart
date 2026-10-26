@@ -37,6 +37,12 @@ class PrayerSite {
       offset: Duration(hours: 3),
       adjustments: MosqueConfig.minuteAdjustments);
 
+  /// مكة المكرمة: مواقيت مبدئية في «رفيق المسلم» حتى يُعرف موقع المستخدم.
+  static const makkah = PrayerSite('مكة المكرمة', 21.4225, 39.8262,
+      country: 'SA',
+      offset: Duration(hours: 3),
+      method: CalculationMethod.umm_al_qura);
+
   /// مكان السكن: توقيت الهاتف للعرض، وطريقة الحساب المعتادة في بلده.
   factory PrayerSite.home(String name, double lat, double lng,
           {String? country,

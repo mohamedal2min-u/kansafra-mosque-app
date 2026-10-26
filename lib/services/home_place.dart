@@ -2,9 +2,11 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../flavor.dart';
 import 'prayer_calc.dart';
 
 /// مكان سكن المستخدم خارج كنصفرة: الأذان يكون على توقيته، وتبقى مواقيت كنصفرة ظاهرة بجانبه.
@@ -16,12 +18,17 @@ class HomePlace {
   static const _k = 'home_place_v2';
   static const _kV1 = 'home_place_v1'; // نسخة 77: lat|lng|name
   static const _kLast = 'last_home_v1';
+  static const _kApprox = 'home_place_approx';
 
-  /// null = الأذان على توقيت كنصفرة.
+  /// null = الأذان على توقيت كنصفرة (وفي «رفيق المسلم»: مكة حتى يُعرف الموقع).
   static final site = ValueNotifier<PrayerSite?>(null);
 
-  /// الموقع المعتمد للأذان: مكان السكن إن حُدّد، وإلا المسجد.
-  static PrayerSite get active => site.value ?? PrayerSite.mosque;
+  /// المكان تقريبي (من عنوان الإنترنت)، لم يحدّده المستخدم بموقع هاتفه بعد.
+  static final approximate = ValueNotifier<bool>(false);
+
+  /// الموقع المعتمد للأذان: مكان السكن إن حُدّد، وإلا المسجد (أو مكة في «رفيق المسلم»).
+  static PrayerSite get active =>
+      site.value ?? (AppFlavor.general ? PrayerSite.makkah : PrayerSite.mosque);
 
   static PrayerSite? _decode(String? v) {
     if (v == null) return null;
@@ -35,6 +42,7 @@ class HomePlace {
   static Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     site.value = _decode(prefs.getString(_k));
+    approximate.value = prefs.getBool(_kApprox) ?? false;
     final v1 = prefs.getString(_kV1)?.split('|');
     if (site.value == null && v1 != null && v1.length == 3) {
       final lat = double.tryParse(v1[0]), lng = double.tryParse(v1[1]);
@@ -45,13 +53,15 @@ class HomePlace {
     await prefs.remove(_kV1);
   }
 
-  static Future<void> set(PrayerSite? s) async {
+  static Future<void> set(PrayerSite? s, {bool approx = false}) async {
     final prefs = await SharedPreferences.getInstance();
     if (s == null) {
       await prefs.remove(_k);
     } else {
       await prefs.setString(_k, jsonEncode(s.toJson()));
     }
+    await prefs.setBool(_kApprox, approx);
+    approximate.value = approx;
     site.value = s;
   }
 
@@ -65,14 +75,18 @@ class HomePlace {
       (await SharedPreferences.getInstance())
           .setString(_kLast, jsonEncode(s.toJson()));
 
-  /// موقع الهاتف التقريبي (بلا GPS). [maxAge]: يُقبل آخر موقع يعرفه الهاتف إن كان أحدث منها،
-  /// وإلا قراءة واحدة جديدة من الشبكة. null إن تعذّر.
+  /// موقع الهاتف. [maxAge]: يُقبل آخر موقع يعرفه الهاتف إن كان أحدث منها، وإلا قراءة واحدة
+  /// جديدة: من الواي فاي والشبكة أولًا في «رفيق المسلم»، ومن GPS أولًا في تطبيق كنصفرة
+  /// (إنترنت إدلب يمرّ عبر تركيا). null إن تعذّر.
   static Future<({double lat, double lng})?> position(
       {Duration maxAge = const Duration(hours: 6)}) async {
     if (kIsWeb) return null;
     try {
-      final r = await _channel.invokeMapMethod<String, dynamic>(
-          'getLocation', {'maxAgeMs': maxAge.inMilliseconds, 'geocode': false});
+      final r = await _channel.invokeMapMethod<String, dynamic>('getLocation', {
+        'maxAgeMs': maxAge.inMilliseconds,
+        'geocode': false,
+        'network': AppFlavor.general,
+      });
       final lat = (r?['lat'] as num?)?.toDouble();
       final lng = (r?['lng'] as num?)?.toDouble();
       return lat == null || lng == null ? null : (lat: lat, lng: lng);
@@ -95,6 +109,25 @@ class HomePlace {
       );
     } catch (_) {
       return (name: null, country: null);
+    }
+  }
+
+  /// مكان تقريبي من عنوان الإنترنت (المدينة)، بلا أي إذن: مواقيت أولية حتى يحدّد المستخدم موقعه.
+  static Future<PrayerSite?> ipPlace() async {
+    try {
+      final r = await http
+          .get(Uri.parse('https://ipinfo.io/json'))
+          .timeout(const Duration(seconds: 8));
+      if (r.statusCode != 200) return null;
+      final j = jsonDecode(r.body) as Map;
+      final loc = '${j['loc'] ?? ''}'.split(',');
+      final lat = double.tryParse(loc.first), lng = double.tryParse(loc.last);
+      if (loc.length != 2 || lat == null || lng == null) return null;
+      final g = await geocode(lat, lng);
+      return PrayerSite.home(g.name ?? '${j['city'] ?? 'موقعك'}', lat, lng,
+          country: g.country ?? j['country'] as String?);
+    } catch (_) {
+      return null;
     }
   }
 

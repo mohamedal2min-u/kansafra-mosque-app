@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import '../flavor.dart';
 import 'adhan_service.dart';
 import 'home_place.dart';
 import 'prayer_calc.dart';
@@ -133,6 +134,7 @@ class TravelWatch {
     _listen();
     if (kIsWeb) return;
     final p = await SharedPreferences.getInstance();
+    if (AppFlavor.general) return _followUser(p, force);
     if (!(p.getBool(_kEnabled) ?? true)) return;
     final granted = await Permission.locationWhenInUse.isGranted;
     askHere.value =
@@ -149,6 +151,59 @@ class TravelWatch {
       }
     }
     await _evaluate(p, now);
+  }
+
+  /// «رفيق المسلم»: المواقيت لمكان المستخدم دائمًا. أول مرة نطلب الموقع (الواي فاي) مباشرة،
+  /// وبلا إذن نقدّر المدينة من عنوان الإنترنت. وعند السفر (أكثر من 30 كم) يتحدّث المكان.
+  static Future<void> _followUser(SharedPreferences p, bool force) async {
+    if (!(p.getBool(_kAsked) ?? false)) {
+      await p.setBool(_kAsked, true);
+      if (await HomePlace.locate() == null) {
+        await p.setInt(_kLast, DateTime.now().millisecondsSinceEpoch);
+        await _reschedule();
+        return;
+      }
+    }
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (!force && now - (p.getInt(_kLast) ?? 0) < 3 * 3600 * 1000) return;
+    final home = HomePlace.site.value;
+    final approx = HomePlace.approximate.value;
+    try {
+      if (await Permission.locationWhenInUse.isGranted) {
+        final pos = await HomePlace.position(maxAge: const Duration(hours: 3));
+        if (pos == null) return;
+        final near = home != null && home.kmTo(pos.lat, pos.lng) < _moveKm;
+        if (home != null && near && !approx) {
+          await p.setInt(_kLast, now);
+          return;
+        }
+        final g = await HomePlace.geocode(pos.lat, pos.lng);
+        final country = g.country ?? home?.country;
+        // نفس المدينة: نُبقي الطريقة والتعديلات. مدينة أخرى في البلد نفسه: الطريقة فقط.
+        await HomePlace.set(PrayerSite.home(
+            g.name ?? (near ? home.name : 'موقعي'), pos.lat, pos.lng,
+            country: country,
+            method: near || (home != null && home.country == country)
+                ? home.method
+                : null,
+            adjustments: near ? home.adjustments : const {}));
+      } else if (home == null || approx) {
+        final ip = await HomePlace.ipPlace();
+        if (ip == null) return;
+        if (home != null && home.kmTo(ip.latitude, ip.longitude) < _moveKm) {
+          await p.setInt(_kLast, now);
+          return;
+        }
+        await HomePlace.set(ip, approx: true);
+      } else {
+        await p.setInt(_kLast, now);
+        return;
+      }
+      await p.setInt(_kLast, now);
+      await _reschedule();
+    } catch (_) {
+      // نعيد المحاولة في الفتح التالي.
+    }
   }
 
   /// يحدّد مكان المستخدم ويحدّث الحالة. يعيد false إن لم يُعرف المكان.

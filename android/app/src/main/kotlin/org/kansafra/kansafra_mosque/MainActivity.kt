@@ -106,7 +106,8 @@ class MainActivity : AudioServiceActivity() {
                     }.start()
                 } else if (call.method == "getLocation") {
                     val maxAge = (call.argument<Number>("maxAgeMs") ?: 6 * 3600_000L).toLong()
-                    getLocation(maxAge, call.argument<Boolean>("geocode") != false, result)
+                    getLocation(maxAge, call.argument<Boolean>("geocode") != false,
+                        call.argument<Boolean>("network") == true, result)
                 } else if (call.method == "geocode") {
                     val lat = call.argument<Double>("lat") ?: 0.0
                     val lng = call.argument<Double>("lng") ?: 0.0
@@ -125,9 +126,10 @@ class MainActivity : AudioServiceActivity() {
     /// موقع الهاتف لمواقيت مكان السكن وكشف السفر: GPS أولًا (إنترنت إدلب يمرّ عبر تركيا، فلا يُعتمد
     /// على الشبكة)، ثم موقع الشبكة إن لم يلتقط GPS إشارة. قراءة واحدة فقط، بلا تتبّع مستمر.
     /// [maxAgeMs]: يُقبل آخر موقع يعرفه الهاتف إن كان أحدث منها.
+    /// [network]: الواي فاي والشبكة أولًا ثم GPS («رفيق المسلم»: أسرع وأخف على البطارية).
     @SuppressLint("MissingPermission")
     @Suppress("DEPRECATION")
-    private fun getLocation(maxAgeMs: Long, geocode: Boolean, result: MethodChannel.Result) {
+    private fun getLocation(maxAgeMs: Long, geocode: Boolean, network: Boolean, result: MethodChannel.Result) {
         val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         val replied = AtomicBoolean(false)
         fun reply(loc: Location?) {
@@ -150,8 +152,10 @@ class MainActivity : AudioServiceActivity() {
             val now = System.currentTimeMillis()
             val gpsLast = last(LocationManager.GPS_PROVIDER)
             val netLast = last(LocationManager.NETWORK_PROVIDER) ?: last(LocationManager.PASSIVE_PROVIDER)
-            if (gpsLast != null && now - gpsLast.time < maxAgeMs) {
-                reply(gpsLast)
+            val fresh = (if (network) listOf(netLast, gpsLast) else listOf(gpsLast))
+                .firstOrNull { it != null && now - it.time < maxAgeMs }
+            if (fresh != null) {
+                reply(fresh)
                 return
             }
             val gpsOn = lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
@@ -189,14 +193,18 @@ class MainActivity : AudioServiceActivity() {
                     got(null)
                 }
             }
-            val fallback = {
-                if (netOn) {
-                    single(LocationManager.NETWORK_PROVIDER, 15_000) { reply(gpsLast ?: netLast) }
-                } else {
-                    reply(gpsLast ?: netLast)
-                }
+            val last = gpsLast ?: netLast
+            val viaNet: (() -> Unit) -> Unit = { next ->
+                if (netOn) single(LocationManager.NETWORK_PROVIDER, 15_000, next) else next()
             }
-            if (gpsOn) single(LocationManager.GPS_PROVIDER, 25_000, fallback) else fallback()
+            val viaGps: (() -> Unit) -> Unit = { next ->
+                if (gpsOn) single(LocationManager.GPS_PROVIDER, 25_000, next) else next()
+            }
+            if (network) {
+                viaNet { viaGps { reply(last) } }
+            } else {
+                viaGps { viaNet { reply(last) } }
+            }
         } catch (e: Exception) {
             if (replied.compareAndSet(false, true)) result.error("location_failed", e.message, null)
         }

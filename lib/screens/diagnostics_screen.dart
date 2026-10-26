@@ -10,6 +10,7 @@ import '../config.dart';
 import '../launcher.dart';
 import '../services/adhan_service.dart';
 import '../services/diag_log.dart';
+import '../flavor.dart';
 import '../services/home_place.dart';
 import '../services/prayer_calc.dart';
 import '../settings.dart';
@@ -87,7 +88,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
   String _report() {
     final perm = _perm;
     return [
-      'تقرير تشخيص: ${MosqueConfig.name}',
+      'تقرير تشخيص: ${AppFlavor.appName}',
       'الإشعارات: ${perm == null ? '؟' : perm.notifications ? 'مسموحة' : 'غير مسموحة'}',
       'التنبيه الدقيق: ${perm == null ? '؟' : perm.exactAlarms ? 'مسموح' : 'غير مسموح'}',
       'المجدول: ${_pending ?? '؟'} | آخر جدولة ناجحة: $_lastOk',

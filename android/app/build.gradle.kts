@@ -33,8 +33,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "org.kansafra.kansafra_mosque"
+        applicationId = "org.kansafra.kansafra_mosque" // يُستبدل في كل نسخة (productFlavors)
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -45,6 +44,21 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    // نسختان من الكود نفسه: تطبيق مسجد كنصفرة، و«رفيق المسلم» العام لكل المسلمين.
+    flavorDimensions += "app"
+    productFlavors {
+        create("kansafra") {
+            dimension = "app"
+            applicationId = "org.kansafra.kansafra_mosque"
+            resValue("string", "app_name", "مسجد كنصفرة الكبير")
+        }
+        create("rafiq") {
+            dimension = "app"
+            applicationId = "se.alamin.rafiq"
+            resValue("string", "app_name", "رفيق المسلم")
+        }
     }
 
     buildTypes {

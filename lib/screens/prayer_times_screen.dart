@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:hijri/hijri_calendar.dart';
 import 'package:intl/intl.dart';
 
+import '../flavor.dart';
 import '../services/adhan_service.dart';
 import '../services/home_place.dart';
 import '../services/prayer_calc.dart';
@@ -46,6 +47,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
   Map<String, DateTime>? _homeToday; // مكان السكن (إن حُدّد)
   late String _nextKey;
   late DateTime _nextTime;
+  bool _locateLater = false;
 
   @override
   void initState() {
@@ -95,18 +97,23 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
   /// يحسب مواقيت اليوم مرة واحدة، ويُعاد الحساب عند تغيّر اليوم أو بعد مرور الصلاة القادمة فقط.
   /// كل الأوقات لحظات حقيقية؛ العرض بتوقيت كل مكان عبر wall. الصلاة القادمة والعدّاد
   /// لمكان الأذان: مكان السكن إن حُدّد، وإلا كنصفرة.
+  /// العمود الأساسي: كنصفرة في تطبيق المسجد، ومكان المستخدم في «رفيق المسلم».
+  PrayerSite get _base =>
+      AppFlavor.general ? HomePlace.active : PrayerSite.mosque;
+
   void _compute(DateTime now) {
     final home = HomePlace.site.value;
     _dayKey = _key(now);
-    _today = PrayerCalc.day(PrayerCalc.wall(now));
-    _homeToday = home?.day(home.now());
+    _today = _base.day(_base.wall(now)) ?? PrayerCalc.day(PrayerCalc.wall(now));
+    // عمود كنصفرة بجانب مكان السكن: في تطبيق المسجد فقط.
+    _homeToday = AppFlavor.general ? null : home?.day(home.now());
     final (k, t) = HomePlace.active.next(now) ?? PrayerCalc.next(now);
     _nextKey = k;
     _nextTime = t;
   }
 
   String _key(DateTime now) =>
-      '${_ymd(PrayerCalc.wall(now))}|${_ymd(HomePlace.site.value?.wall(now) ?? now)}';
+      '${_ymd(_base.wall(now))}|${_ymd(HomePlace.site.value?.wall(now) ?? now)}';
 
   void _tick() {
     final now = DateTime.now();
@@ -152,7 +159,9 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
     final fmt = DateFormat.jm('ar');
     final home = HomePlace.site.value;
     // التاريخ بتوقيت مكان السكن إن حُدّد، وإلا بتوقيت المسجد.
-    final now = home?.now() ?? PrayerCalc.mosqueNow();
+    final now = AppFlavor.general
+        ? _base.now()
+        : (home?.now() ?? PrayerCalc.mosqueNow());
     final h = HijriCalendar.fromDate(now);
     final scheme = Theme.of(context).colorScheme;
     final homeTimes = _homeToday;
@@ -185,7 +194,9 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
         const SizedBox(height: 12),
         _NextPrayerCard(
             label: _labels[_nextKey]!,
-            place: home == null ? null : 'بتوقيت ${home.name}',
+            place: AppFlavor.general
+                ? 'بتوقيت ${_base.name}${HomePlace.approximate.value || home == null ? ' (تقريبي)' : ''}'
+                : (home == null ? null : 'بتوقيت ${home.name}'),
             countdown: _countdown),
         const _LiveRadioCard(),
         ValueListenableBuilder<bool>(
@@ -227,6 +238,20 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
                   dismiss: 'لا، شكرًا',
                   onDismiss: TravelWatch.dismiss),
         ),
+        if (AppFlavor.general &&
+            !_locateLater &&
+            (home == null || HomePlace.approximate.value))
+          _InfoCard(
+              icon: Icons.wifi_rounded,
+              title: 'مواقيت دقيقة لمكانك',
+              text: home == null
+                  ? 'المواقيت الآن لمكة المكرمة. حدّد موقعك (من الواي فاي، بلا GPS) لتصير المواقيت والأذان لمدينتك. يبقى موقعك على هاتفك.'
+                  : 'المواقيت لـ${home.name} بشكل تقريبي. حدّد موقعك (من الواي فاي، بلا GPS) لمواقيت أدق. يبقى موقعك على هاتفك.',
+              action: 'تحديد موقعي',
+              actionIcon: Icons.my_location_rounded,
+              onAction: _locate,
+              dismiss: 'لاحقًا',
+              onDismiss: () => setState(() => _locateLater = true)),
         const _ResumeReadingCard(),
         const SizedBox(height: 6),
         if (homeTimes != null)
@@ -267,8 +292,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
                       fontWeight: FontWeight.w700, fontSize: 16)),
               subtitle: k == _nextKey ? const Text('الصلاة القادمة') : null,
               trailing: homeTimes == null
-                  ? Text(fmt.format(PrayerCalc.wall(_today[k]!)),
-                      style: timeStyle)
+                  ? Text(fmt.format(_base.wall(_today[k]!)), style: timeStyle)
                   : Row(mainAxisSize: MainAxisSize.min, children: [
                       col(fmt.format(home!.wall(homeTimes[k]!)), timeStyle),
                       col(fmt.format(PrayerCalc.wall(_today[k]!)), mosqueStyle),

@@ -13,6 +13,7 @@ import '../quran/player.dart';
 import '../config.dart';
 import '../launcher.dart';
 import '../services/adhan_service.dart';
+import '../flavor.dart';
 import '../services/home_place.dart';
 import '../services/travel_watch.dart';
 import '../services/prayer_calc.dart';
@@ -185,6 +186,46 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
   }
 
+  /// طريقة الحساب وتعديل الدقائق لمكان المستخدم.
+  List<Widget> _siteTiles(PrayerSite home, double indent) => [
+        ListTile(
+          contentPadding: EdgeInsetsDirectional.only(start: indent, end: 16),
+          title: const Text('طريقة الحساب'),
+          subtitle: Text(home.methodName),
+          trailing: const Icon(Icons.chevron_left),
+          onTap: () => _pickMethod(home),
+        ),
+        ListTile(
+          contentPadding: EdgeInsetsDirectional.only(start: indent, end: 16),
+          title: const Text('مطابقة مسجدك (تعديل بالدقائق)'),
+          subtitle: Text(_adjSummary(home.adjustments)),
+          trailing: const Icon(Icons.chevron_left),
+          onTap: () => _editAdjustments(home),
+        ),
+      ];
+
+  /// «رفيق المسلم»: المواقيت لمكان المستخدم دائمًا (من الواي فاي)، مع زر التحديث.
+  Widget _generalPlace(PrayerSite? home) => Column(children: [
+        ListTile(
+          leading: const Icon(Icons.location_on_rounded),
+          title: const Text('موقعك'),
+          subtitle: Text(home == null
+              ? 'مكة المكرمة، حتى تحدّد موقعك'
+              : '${home.name}${HomePlace.approximate.value ? ' (تقريبي)' : ''}'),
+          trailing: _locating
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2.5))
+              : IconButton(
+                  icon: const Icon(Icons.my_location_rounded),
+                  tooltip: 'تحديد موقعي (من الواي فاي)',
+                  onPressed: _locate,
+                ),
+        ),
+        if (home != null) ..._siteTiles(home, 16),
+      ]);
+
   Future<void> _useMosqueTime() async {
     await HomePlace.clear();
     await AdhanService.instance.scheduleAll(force: true);
@@ -273,59 +314,44 @@ class _SettingsScreenState extends State<SettingsScreen>
       ),
       ValueListenableBuilder<PrayerSite?>(
         valueListenable: HomePlace.site,
-        builder: (_, home, __) => RadioGroup<bool>(
-          groupValue: home != null,
-          onChanged: (v) {
-            if (v == true && home == null) _locate();
-            if (v == false && home != null) _useMosqueTime();
-          },
-          child: Column(children: [
-            const RadioListTile<bool>(
-              title: Text('توقيت كنصفرة'),
-              subtitle: Text('مواقيت المسجد'),
-              value: false,
-            ),
-            RadioListTile<bool>(
-              title: const Text('توقيت مكان سكني'),
-              subtitle: Text(home == null
-                  ? 'لمن يسكن خارج كنصفرة: يُحدَّد موقعك مرة واحدة'
-                  : '${home.name}، وتبقى مواقيت كنصفرة ظاهرة في الرئيسية'),
-              value: true,
-              secondary: _locating
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2.5))
-                  : home == null
-                      ? null
-                      : IconButton(
-                          icon: const Icon(Icons.my_location_rounded),
-                          tooltip: 'تحديث الموقع',
-                          onPressed: _locate,
-                        ),
-            ),
-            if (home != null) ...[
-              ListTile(
-                contentPadding:
-                    const EdgeInsetsDirectional.only(start: 72, end: 16),
-                title: const Text('طريقة الحساب'),
-                subtitle: Text(home.methodName),
-                trailing: const Icon(Icons.chevron_left),
-                onTap: () => _pickMethod(home),
+        builder: (_, home, __) => AppFlavor.general
+            ? _generalPlace(home)
+            : RadioGroup<bool>(
+                groupValue: home != null,
+                onChanged: (v) {
+                  if (v == true && home == null) _locate();
+                  if (v == false && home != null) _useMosqueTime();
+                },
+                child: Column(children: [
+                  const RadioListTile<bool>(
+                    title: Text('توقيت كنصفرة'),
+                    subtitle: Text('مواقيت المسجد'),
+                    value: false,
+                  ),
+                  RadioListTile<bool>(
+                    title: const Text('توقيت مكان سكني'),
+                    subtitle: Text(home == null
+                        ? 'لمن يسكن خارج كنصفرة: يُحدَّد موقعك مرة واحدة'
+                        : '${home.name}، وتبقى مواقيت كنصفرة ظاهرة في الرئيسية'),
+                    value: true,
+                    secondary: _locating
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2.5))
+                        : home == null
+                            ? null
+                            : IconButton(
+                                icon: const Icon(Icons.my_location_rounded),
+                                tooltip: 'تحديث الموقع',
+                                onPressed: _locate,
+                              ),
+                  ),
+                  if (home != null) ..._siteTiles(home, 72),
+                ]),
               ),
-              ListTile(
-                contentPadding:
-                    const EdgeInsetsDirectional.only(start: 72, end: 16),
-                title: const Text('مطابقة مسجدك (تعديل بالدقائق)'),
-                subtitle: Text(_adjSummary(home.adjustments)),
-                trailing: const Icon(Icons.chevron_left),
-                onTap: () => _editAdjustments(home),
-              ),
-            ],
-          ]),
-        ),
       ),
-      if (!kIsWeb) const _TravelSection(),
+      if (!kIsWeb && !AppFlavor.general) const _TravelSection(),
       const Padding(
         padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
         child: Text('المظهر'),
