@@ -112,8 +112,25 @@ class TravelWatch {
     await _cancel(_notifAway);
   }
 
+  static bool _listening = false;
+
+  /// بمجرد تحديد مكان السكن (من أي بطاقة أو من الإعدادات) تختفي بطاقات المكان فورًا،
+  /// ولو ظهرت أثناء انتظار الـGPS.
+  static void _listen() {
+    if (_listening) return;
+    _listening = true;
+    HomePlace.site.addListener(() async {
+      if (HomePlace.site.value == null) return;
+      hint.value = null;
+      askHere.value = false;
+      await (await SharedPreferences.getInstance()).setBool(_kAsked, true);
+      await _cancel(_notifAway);
+    });
+  }
+
   /// يُستدعى عند فتح التطبيق وعند الرجوع إليه، ويفحص فعليًا مرة كل 3 ساعات على الأكثر.
   static Future<void> check({bool force = false}) async {
+    _listen();
     if (kIsWeb) return;
     final p = await SharedPreferences.getInstance();
     if (!(p.getBool(_kEnabled) ?? true)) return;

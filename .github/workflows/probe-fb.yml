@@ -1,0 +1,15 @@
+name: probe-fb
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find Facebook page id
+        run: |
+          for ua in "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)" "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36"; do
+            for u in https://www.facebook.com/kansafra.mosque/ https://m.facebook.com/kansafra.mosque/ https://mbasic.facebook.com/kansafra.mosque/; do
+              echo "== $u | ${ua:0:20}"
+              curl -sL -A "$ua" -H "Accept-Language: ar,en" "$u" -o page.html -w "HTTP %{http_code} %{size_download}\n" || true
+              grep -oE 'fb://(page|profile)/[?id=]*[0-9]+|"pageID":"[0-9]+"|"page_id":"?[0-9]+|"userID":"[0-9]+"|"profile_id":"?[0-9]+|entity_id[^0-9]{0,6}[0-9]{8,}|"delegate_page_id":"[0-9]+"|al:android:url" content="[^"]+"' page.html | sort | uniq -c | head -20 || true
+            done
+          done
