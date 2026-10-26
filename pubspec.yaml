@@ -45,6 +45,7 @@ flutter:
         - asset: assets/fonts/NotoNaskhArabic-Regular.ttf
   assets:
     - assets/quran.json
+    - assets/tafsir/
     - assets/LICENSE-quran.txt
     - assets/adhan/
     - assets/pay/

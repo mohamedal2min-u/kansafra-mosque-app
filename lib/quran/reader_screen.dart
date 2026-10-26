@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'khatma.dart';
 import 'reading_stats.dart';
 import 'saved_verses.dart';
+import 'tafsir.dart';
 import 'listen_screen.dart' show PlayerBar;
 import 'player.dart';
 import 'timings.dart';
@@ -328,6 +329,8 @@ class _SurahReaderScreenState extends State<SurahReaderScreen>
     with WidgetsBindingObserver {
   static const _kFont = 'quran_font_size';
   static const _kFamily = 'quran_font_family';
+  static const _kTafsirInline = 'quran_tafsir_inline';
+  bool _tafsirInline = false; // وضع التفسير: يظهر التفسير تحت كل آية
   double _size = 26;
   // خط النسخ الواضح للقرآن افتراضيًا، أو خط التطبيق (Tajawal) بالتبديل من شريط العنوان.
   String _family = 'NotoNaskh';
@@ -351,6 +354,12 @@ class _SurahReaderScreenState extends State<SurahReaderScreen>
     SharedPreferences.getInstance().then((p) {
       final v = p.getDouble(_kFont);
       final f = p.getString(_kFamily);
+      final ti = p.getBool(_kTafsirInline) ?? false;
+      if (ti) {
+        Tafsir.load().then((_) {
+          if (mounted) setState(() => _tafsirInline = true);
+        });
+      }
       if (mounted && (v != null || f != null)) {
         setState(() {
           if (v != null) _size = v;
@@ -484,6 +493,20 @@ class _SurahReaderScreenState extends State<SurahReaderScreen>
     super.dispose();
   }
 
+  Future<void> _toggleTafsirInline() async {
+    final on = !_tafsirInline;
+    if (on && !await Tafsir.load()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تعذّر تحميل التفسير.')));
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _tafsirInline = on);
+    (await SharedPreferences.getInstance()).setBool(_kTafsirInline, on);
+  }
+
   Future<void> _toggleFamily() async {
     setState(() => _family = _family == 'NotoNaskh' ? 'Tajawal' : 'NotoNaskh');
     (await SharedPreferences.getInstance()).setString(_kFamily, _family);
@@ -496,6 +519,16 @@ class _SurahReaderScreenState extends State<SurahReaderScreen>
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: Icon(Icons.menu_book_rounded,
+                color: Theme.of(ctx).colorScheme.primary),
+            title: const Text('تفسير الآية'),
+            subtitle: const Text('التفسير الميسّر'),
+            onTap: () {
+              Navigator.pop(ctx);
+              showTafsirSheet(context, _s, v);
+            },
+          ),
           ListTile(
             leading: Icon(Icons.bookmark_add_rounded,
                 color: Theme.of(ctx).colorScheme.tertiary),
@@ -583,15 +616,48 @@ class _SurahReaderScreenState extends State<SurahReaderScreen>
                   ),
           ),
           IconButton(
-              tooltip: 'نوع الخط',
-              icon: const Icon(Icons.font_download_outlined),
-              onPressed: _toggleFamily),
-          IconButton(
-              icon: const Icon(Icons.text_decrease),
-              onPressed: () => _setSize(_size - 2)),
-          IconButton(
-              icon: const Icon(Icons.text_increase),
-              onPressed: () => _setSize(_size + 2)),
+            tooltip:
+                _tafsirInline ? 'إخفاء التفسير' : 'إظهار التفسير تحت الآيات',
+            icon: Icon(_tafsirInline
+                ? Icons.chrome_reader_mode_rounded
+                : Icons.chrome_reader_mode_outlined),
+            onPressed: _toggleTafsirInline,
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'إعدادات العرض',
+            icon: const Icon(Icons.text_fields_rounded),
+            onSelected: (v) {
+              switch (v) {
+                case 'font':
+                  _toggleFamily();
+                case 'bigger':
+                  _setSize(_size + 2);
+                case 'smaller':
+                  _setSize(_size - 2);
+              }
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                  value: 'bigger',
+                  child: ListTile(
+                      leading: Icon(Icons.text_increase),
+                      title: Text('تكبير الخط'))),
+              const PopupMenuItem(
+                  value: 'smaller',
+                  child: ListTile(
+                      leading: Icon(Icons.text_decrease),
+                      title: Text('تصغير الخط'))),
+              PopupMenuItem(
+                value: 'font',
+                child: ListTile(
+                  leading: const Icon(Icons.font_download_outlined),
+                  title: Text(_family == 'NotoNaskh'
+                      ? 'خط التطبيق'
+                      : 'خط النسخ (للقرآن)'),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       // ListView.builder يبني الآيات الظاهرة فقط، فيبقى خفيفًا على الهواتف.
@@ -645,17 +711,47 @@ class _SurahReaderScreenState extends State<SurahReaderScreen>
                                     Icon(Icons.bookmark_rounded, color: gold),
                               ),
                             Expanded(
-                              child: Text(
-                                '${QuranData.verse(s, v)} ${QuranData.endMark(v)}',
-                                textAlign: TextAlign.justify,
-                                style: TextStyle(
-                                  fontFamily: _family,
-                                  fontSize: _size,
-                                  height: _family == 'NotoNaskh' ? 1.9 : 2,
-                                  color: active ? red : null,
-                                  fontWeight: active ? FontWeight.w700 : null,
-                                ),
-                              ),
+                              child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Text(
+                                      '${QuranData.verse(s, v)} ${QuranData.endMark(v)}',
+                                      textAlign: TextAlign.justify,
+                                      style: TextStyle(
+                                        fontFamily: _family,
+                                        fontSize: _size,
+                                        height:
+                                            _family == 'NotoNaskh' ? 1.9 : 2,
+                                        color: active ? red : null,
+                                        fontWeight:
+                                            active ? FontWeight.w700 : null,
+                                      ),
+                                    ),
+                                    if (_tafsirInline &&
+                                        Tafsir.of(s, v) != null)
+                                      Container(
+                                        margin: const EdgeInsets.only(
+                                            top: 4, bottom: 8),
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primaryContainer
+                                              .withValues(alpha: 0.5),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          Tafsir.of(s, v)!,
+                                          textAlign: TextAlign.justify,
+                                          style: TextStyle(
+                                              fontSize:
+                                                  (_size * 0.6).clamp(14, 22),
+                                              height: 1.8),
+                                        ),
+                                      ),
+                                  ]),
                             ),
                           ]),
                     ),
