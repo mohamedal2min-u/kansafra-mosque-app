@@ -17,7 +17,7 @@ class Bookmark {
   String get label => 'سورة ${QuranData.name(surah)}، آية $verse';
 }
 
-class Khatma {
+class Khatma extends ChangeNotifier {
   Khatma._();
   static final instance = Khatma._();
 
@@ -26,6 +26,8 @@ class Khatma {
   static const _kHour = 'khatma_hour';
   static const _kMinute = 'khatma_minute';
   static const _kLastRead = 'khatma_last_read';
+  static const _kGoalDays = 'khatma_goal_days';
+  static const _kGoalStart = 'khatma_goal_start';
   static const _baseId = 7000; // معرّفات إشعارات الختمة (لا تتعارض مع الأذان)
   static const _days = 14;
 
@@ -33,6 +35,8 @@ class Khatma {
   bool remind = true;
   TimeOfDay time = const TimeOfDay(hour: 20, minute: 0);
   bool _loaded = false;
+  int? goalDays; // هدف: ختمة في كذا يومًا
+  DateTime? goalStart;
 
   Future<void> load() async {
     if (_loaded) return;
@@ -64,6 +68,7 @@ class Khatma {
     final p = await SharedPreferences.getInstance();
     await p.setString(_kMark, jsonEncode({'s': surah, 'v': verse}));
     await p.setString(_kLastRead, _today());
+    notifyListeners();
     await scheduleReminders();
   }
 
@@ -72,6 +77,7 @@ class Khatma {
     mark.value = null;
     final p = await SharedPreferences.getInstance();
     await p.remove(_kMark);
+    notifyListeners();
     await scheduleReminders();
   }
 
@@ -83,7 +89,55 @@ class Khatma {
     await p.setBool(_kRemind, remind);
     await p.setInt(_kHour, time.hour);
     await p.setInt(_kMinute, time.minute);
+    notifyListeners();
     await scheduleReminders();
+  }
+
+  /// يحدد هدف الختمة بعدد الأيام ويبدأ العدّ من اليوم (null يلغي الهدف).
+  Future<void> setGoal(int? days) async {
+    await load();
+    goalDays = days;
+    goalStart = days == null ? null : DateTime.now();
+    final p = await SharedPreferences.getInstance();
+    if (days == null) {
+      await p.remove(_kGoalDays);
+      await p.remove(_kGoalStart);
+    } else {
+      await p.setInt(_kGoalDays, days);
+      await p.setString(_kGoalStart, goalStart!.toIso8601String());
+    }
+    notifyListeners(); // لتتحدّث البطاقات
+    await scheduleReminders();
+  }
+
+  /// نسبة ما قرأه من المصحف (0 إلى 1) بحسب موضع العلامة.
+  double get progress {
+    final m = mark.value;
+    return m == null
+        ? 0
+        : QuranData.absIndex(m.surah, m.verse) / QuranData.totalVerses;
+  }
+
+  /// الأيام المتبقية من الهدف (لا تقل عن 1 ما دام الهدف قائمًا).
+  int? get daysLeft {
+    final d = goalDays, st = goalStart;
+    if (d == null || st == null) return null;
+    final today = DateTime.now();
+    final elapsed = DateTime(today.year, today.month, today.day)
+        .difference(DateTime(st.year, st.month, st.day))
+        .inDays;
+    final left = d - elapsed;
+    return left < 1 ? 1 : left;
+  }
+
+  /// عدد الآيات المطلوب قراءتها اليوم لإنهاء الهدف في موعده.
+  int? get dailyVerses {
+    final left = daysLeft;
+    final m = mark.value;
+    if (left == null) return null;
+    final remaining = QuranData.totalVerses -
+        (m == null ? 0 : QuranData.absIndex(m.surah, m.verse));
+    return remaining <= 0 ? 0 : (remaining / left).ceil();
   }
 
   /// يجدول تذكيرًا لكل يوم من الأيام القادمة (14 يومًا) بوقت واحد، ويتخطى اليوم إن كان قد قرأ.
@@ -108,7 +162,9 @@ class Khatma {
         await plugin.zonedSchedule(
           _baseId + d,
           'وردك اليومي من القرآن',
-          'أكمل ختمتك من ${m.label}',
+          dailyVerses == null || dailyVerses == 0
+              ? 'أكمل ختمتك من ${m.label}'
+              : 'وردك اليوم نحو $dailyVerses آية. أكمل من ${m.label}',
           at,
           const NotificationDetails(
             android: AndroidNotificationDetails(

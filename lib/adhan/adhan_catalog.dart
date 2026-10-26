@@ -29,10 +29,15 @@ class AdhanCatalog {
   };
   static String? lastError;
 
+  /// مفتاح إيقاف عن بُعد: يضع المسؤول "enabled": false في catalog.json فتتوقف القائمة دون تحديث التطبيق.
+  static bool disabled = false;
+
   static bool get supported => !kIsWeb && Platform.isAndroid;
 
   static List<OnlineAdhan> _parse(String body) {
     final j = jsonDecode(body) as Map<String, dynamic>;
+    disabled = j['enabled'] == false;
+    if (disabled) return const [];
     return [
       for (final v in (j['voices'] as List))
         OnlineAdhan(v['id'] as String, v['name'] as String, v['file'] as String,

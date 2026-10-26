@@ -3,6 +3,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../quran/audio_store.dart';
 import 'adhan_catalog_screen.dart';
+import 'diagnostics_screen.dart';
 import '../quran/downloader.dart';
 import '../quran/player.dart';
 import '../config.dart';
@@ -71,8 +72,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       return;
     }
     try {
-      await p.preview(id, v.name,
-          (tag) => AudioSource.asset(v.asset(_choice.long), tag: tag));
+      await p.preview(
+          id, v.name, (tag) => AudioSource.asset(v.previewAsset, tag: tag));
     } catch (_) {}
   }
 
@@ -254,6 +255,21 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SnackBar(content: Text('تعذّر فتح الرابط.')));
             }
           },
+        ),
+      ListTile(
+        leading: const Icon(Icons.health_and_safety_rounded),
+        title: const Text('تشخيص التطبيق'),
+        subtitle: const Text('لماذا لا يصلني الأذان؟ وتجربة الصوت'),
+        trailing: const Icon(Icons.chevron_left),
+        onTap: () => Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const DiagnosticsScreen())),
+      ),
+      if (Launcher.supported)
+        ListTile(
+          leading: const Icon(Icons.privacy_tip_rounded),
+          title: const Text('سياسة الخصوصية'),
+          trailing: const Icon(Icons.open_in_new_rounded),
+          onTap: () => Launcher.openUrl(MosqueConfig.privacyUrl),
         ),
       ExpansionTile(
         title: const Text('مصادر تسجيلات الأذان'),

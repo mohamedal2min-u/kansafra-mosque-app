@@ -47,9 +47,10 @@ jobs:
           echo "::notice::SIGNING=release-key (base64 length $len)"
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos
+      - run: flutter test
       - name: Build APK
         run: |
-          flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64 --build-name=1.0.0 --build-number=$GITHUB_RUN_NUMBER > build.log 2>&1 && flutter build appbundle --release --build-name=1.0.0 --build-number=$GITHUB_RUN_NUMBER >> build.log 2>&1 || {
+          flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64 --split-debug-info=build/symbols --build-name=1.0.0 --build-number=$GITHUB_RUN_NUMBER > build.log 2>&1 && flutter build appbundle --release --split-debug-info=build/symbols --build-name=1.0.0 --build-number=$GITHUB_RUN_NUMBER >> build.log 2>&1 || {
             msg=$(grep -E "(rror|What went wrong|FAILURE|Could not|requires|not found)" -A3 build.log | head -25 | tr '\n' '|' | cut -c1-1800)
             echo "::error::BUILD FAILED: $msg"
             exit 1

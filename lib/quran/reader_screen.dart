@@ -5,12 +5,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'khatma.dart';
 import 'reading_stats.dart';
+import 'saved_verses.dart';
 import 'listen_screen.dart' show PlayerBar;
 import 'player.dart';
 import 'timings.dart';
 import 'quran_data.dart';
 
-/// قائمة السور (القراءة تعمل بدون إنترنت: النص مضمّن في التطبيق).
+/// قائمة السور والأجزاء مع البحث وبطاقة الختمة (القراءة تعمل بدون إنترنت: النص مضمّن في التطبيق).
 class SurahListScreen extends StatefulWidget {
   const SurahListScreen({super.key});
 
@@ -19,107 +20,291 @@ class SurahListScreen extends StatefulWidget {
 }
 
 class _SurahListScreenState extends State<SurahListScreen> {
+  int _mode = 0; // 0 سور، 1 أجزاء
+  String _query = '';
+
   @override
   void initState() {
     super.initState();
-    Khatma.instance.load().then((_) {
+    Future.wait([Khatma.instance.load(), SavedVerses.instance.load()])
+        .then((_) {
       if (mounted) setState(() {});
     });
   }
 
+  void _open(int surah, [int? verse]) => Navigator.of(context).push(
+        MaterialPageRoute(
+            builder: (_) =>
+                SurahReaderScreen(surah: surah, initialVerse: verse)),
+      );
+
   Future<void> _pickTime() async {
     final t = await showTimePicker(
         context: context, initialTime: Khatma.instance.time);
-    if (t != null) {
-      await Khatma.instance.setReminder(at: t);
-      if (mounted) setState(() {});
-    }
+    if (t != null) await Khatma.instance.setReminder(at: t);
+  }
+
+  Future<void> _pickGoal() async {
+    final k = Khatma.instance;
+    final choice = await showDialog<int>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('أريد ختم القرآن خلال'),
+        children: [
+          for (final d in const [7, 15, 30, 60, 90])
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, d),
+              child: Text(d == 30 ? '$d يومًا (شهر)' : '$d يومًا',
+                  style: Theme.of(ctx).textTheme.titleMedium),
+            ),
+          if (k.goalDays != null)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, 0),
+              child: Text('إلغاء الهدف',
+                  style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
+            ),
+        ],
+      ),
+    );
+    if (choice != null) await k.setGoal(choice == 0 ? null : choice);
+  }
+
+  Widget _khatmaCard() {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    return ListenableBuilder(
+      listenable: Khatma.instance,
+      builder: (context, _) {
+        final k = Khatma.instance;
+        final m = k.mark.value;
+        final left = k.daysLeft;
+        final daily = k.dailyVerses;
+        return Container(
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+              color: cs.primaryContainer,
+              borderRadius: BorderRadius.circular(22)),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(Icons.bookmark_rounded, color: cs.tertiary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(m == null ? 'ختمتي' : 'وصلتَ إلى: ${m.label}',
+                    style: tt.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: cs.onPrimaryContainer)),
+              ),
+            ]),
+            if (m == null) ...[
+              const SizedBox(height: 6),
+              Text(
+                  'أثناء القراءة اضغط على أي آية ثم «وصلتُ إلى هنا» لتضع علامة، وتكمل منها غدًا.',
+                  style: TextStyle(color: cs.onPrimaryContainer)),
+            ] else ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                    value: k.progress,
+                    minHeight: 8,
+                    backgroundColor: cs.surface.withValues(alpha: 0.6),
+                    color: cs.tertiary),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${(k.progress * 100).toStringAsFixed(1)}٪ من المصحف'
+                '${left == null ? '' : ' • المتبقي $left يومًا${daily == null || daily == 0 ? '' : ' • وردك اليوم نحو $daily آية'}'}',
+                style: tt.bodySmall?.copyWith(color: cs.onPrimaryContainer),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.menu_book_rounded),
+                  label: const Text('أكمل القراءة'),
+                  onPressed: () => _open(m.surah, m.verse),
+                ),
+              ),
+            ],
+            const SizedBox(height: 6),
+            Wrap(spacing: 8, children: [
+              ActionChip(
+                avatar: const Icon(Icons.flag_rounded, size: 18),
+                label: Text(k.goalDays == null
+                    ? 'حدّد هدف الختمة'
+                    : 'الهدف: ${k.goalDays} يومًا'),
+                onPressed: _pickGoal,
+              ),
+              ValueListenableBuilder<List<Bookmark>>(
+                valueListenable: SavedVerses.instance.items,
+                builder: (context, list, _) => ActionChip(
+                  avatar: const Icon(Icons.star_rounded, size: 18),
+                  label: Text('آياتي المحفوظة (${list.length})'),
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const SavedVersesScreen())),
+                ),
+              ),
+            ]),
+            if (m != null)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: Text('تذكير يومي بإكمال الورد',
+                    style: TextStyle(color: cs.onPrimaryContainer)),
+                subtitle: Text(
+                    'الساعة ${k.time.format(context)}، ولا يُرسَل في يوم قرأتَ فيه',
+                    style: TextStyle(
+                        color: cs.onPrimaryContainer.withValues(alpha: 0.8))),
+                value: k.remind,
+                onChanged: (v) => k.setReminder(on: v),
+              ),
+            if (m != null && k.remind)
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                    icon: const Icon(Icons.schedule_rounded),
+                    label: const Text('تغيير وقت التذكير'),
+                    onPressed: _pickTime),
+              ),
+          ]),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return ListView.builder(
-      itemCount: QuranData.surahCount + 1,
-      itemBuilder: (context, i) {
-        if (i == 0) {
-          return ValueListenableBuilder<Bookmark?>(
-            valueListenable: Khatma.instance.mark,
-            builder: (context, m, _) => Card(
-              margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              color: cs.primaryContainer,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        Icon(Icons.bookmark_rounded, color: cs.tertiary),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                              m == null ? 'ختمتي' : 'وصلتَ إلى: ${m.label}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700)),
-                        ),
-                      ]),
-                      const SizedBox(height: 6),
-                      if (m == null)
-                        const Text(
-                            'أثناء القراءة اضغط على أي آية ثم «وصلتُ إلى هنا» لتضع علامة، وتكمل منها غدًا.')
-                      else ...[
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            icon: const Icon(Icons.menu_book_rounded),
-                            label: const Text('أكمل القراءة'),
-                            onPressed: () =>
-                                Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => SurahReaderScreen(
-                                  surah: m.surah, initialVerse: m.verse),
-                            )),
-                          ),
-                        ),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
-                          title: const Text('تذكير يومي بإكمال الورد'),
-                          subtitle: Text(
-                              'الساعة ${Khatma.instance.time.format(context)}، ولا يُرسَل في يوم قرأتَ فيه'),
-                          value: Khatma.instance.remind,
-                          onChanged: (v) async {
-                            await Khatma.instance.setReminder(on: v);
-                            if (mounted) setState(() {});
-                          },
-                        ),
-                        if (Khatma.instance.remind)
-                          Align(
-                            alignment: AlignmentDirectional.centerStart,
-                            child: TextButton.icon(
-                              icon: const Icon(Icons.schedule_rounded),
-                              label: const Text('تغيير وقت التذكير'),
-                              onPressed: _pickTime,
-                            ),
-                          ),
-                      ],
-                    ]),
-              ),
-            ),
-          );
-        }
-        final n = i;
-        return ListTile(
-          leading: CircleAvatar(child: Text('$n')),
-          title: Text(QuranData.name(n)),
-          subtitle: Text(
-              '${QuranData.isMakki(n) ? 'مكية' : 'مدنية'} • ${QuranData.verseCount(n)} آية'),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => SurahReaderScreen(surah: n)),
+    final searching = _query.trim().length >= 2;
+    final results = searching ? QuranData.search(_query) : const <(int, int)>[];
+    return CustomScrollView(slivers: [
+      SliverToBoxAdapter(child: _khatmaCard()),
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: TextField(
+            decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                hintText: 'ابحث في آيات القرآن'),
+            onChanged: (v) => setState(() => _query = v),
           ),
-        );
-      },
+        ),
+      ),
+      if (!searching)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: SegmentedButton<int>(
+              segments: const [
+                ButtonSegment(value: 0, label: Text('السور')),
+                ButtonSegment(value: 1, label: Text('الأجزاء')),
+              ],
+              selected: {_mode},
+              onSelectionChanged: (v) => setState(() => _mode = v.first),
+            ),
+          ),
+        ),
+      if (searching)
+        results.isEmpty
+            ? const SliverToBoxAdapter(
+                child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: Text('لا توجد نتائج.'))))
+            : SliverList.builder(
+                itemCount: results.length,
+                itemBuilder: (context, i) {
+                  final (s, v) = results[i];
+                  return ListTile(
+                    title: Text('سورة ${QuranData.name(s)} • آية $v',
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text(QuranData.verse(s, v),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontFamily: 'NotoNaskh', height: 1.8)),
+                    onTap: () => _open(s, v),
+                  );
+                },
+              )
+      else if (_mode == 1)
+        SliverList.builder(
+          itemCount: QuranData.juzStarts.length,
+          itemBuilder: (context, i) {
+            final (s, v) = QuranData.juzStarts[i];
+            return ListTile(
+              leading: CircleAvatar(child: Text('${i + 1}')),
+              title: Text('الجزء ${i + 1}'),
+              subtitle: Text('يبدأ من سورة ${QuranData.name(s)}، آية $v'),
+              onTap: () => _open(s, v),
+            );
+          },
+        )
+      else
+        SliverList.builder(
+          itemCount: QuranData.surahCount,
+          itemBuilder: (context, i) {
+            final n = i + 1;
+            return ListTile(
+              leading: CircleAvatar(child: Text('$n')),
+              title: Text(QuranData.name(n)),
+              subtitle: Text(
+                  '${QuranData.isMakki(n) ? 'مكية' : 'مدنية'} • ${QuranData.verseCount(n)} آية'),
+              onTap: () => _open(n),
+            );
+          },
+        ),
+    ]);
+  }
+}
+
+/// الآيات التي حفظها المستخدم: الضغط يفتح المصحف عندها.
+class SavedVersesScreen extends StatelessWidget {
+  const SavedVersesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('آياتي المحفوظة')),
+      body: ValueListenableBuilder<List<Bookmark>>(
+        valueListenable: SavedVerses.instance.items,
+        builder: (context, list, _) => list.isEmpty
+            ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                      'لا توجد آيات محفوظة. اضغط على أي آية أثناء القراءة ثم «حفظ الآية».',
+                      textAlign: TextAlign.center),
+                ),
+              )
+            : ListView.separated(
+                itemCount: list.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, i) {
+                  final b = list[i];
+                  return ListTile(
+                    title: Text(b.label,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text(QuranData.verse(b.surah, b.verse),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontFamily: 'NotoNaskh', height: 1.8)),
+                    trailing: IconButton(
+                      tooltip: 'إزالة',
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: () =>
+                          SavedVerses.instance.toggle(b.surah, b.verse),
+                    ),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => SurahReaderScreen(
+                              surah: b.surah, initialVerse: b.verse)),
+                    ),
+                  );
+                },
+              ),
+      ),
     );
   }
 }
@@ -183,6 +368,7 @@ class _SurahReaderScreenState extends State<SurahReaderScreen>
     Khatma.instance.load().then((_) {
       if (mounted) setState(() {});
     });
+    SavedVerses.instance.load();
     final iv = widget.initialVerse;
     if (iv != null) {
       // الانتقال إلى آية العلامة بعد أول رسم.
@@ -323,6 +509,25 @@ class _SurahReaderScreenState extends State<SurahReaderScreen>
                   content: Text(
                       'حُفظت العلامة. تكمل منها لاحقًا من تبويب «قراءة»، وسنذكّرك يوميًا.'),
                 ));
+              }
+            },
+          ),
+          ListTile(
+            leading: Icon(
+                SavedVerses.instance.contains(_s, v)
+                    ? Icons.star_rounded
+                    : Icons.star_border_rounded,
+                color: Theme.of(ctx).colorScheme.tertiary),
+            title: Text(SavedVerses.instance.contains(_s, v)
+                ? 'إزالة من آياتي المحفوظة'
+                : 'حفظ الآية في «آياتي المحفوظة»'),
+            onTap: () async {
+              Navigator.pop(ctx);
+              final added = await SavedVerses.instance.toggle(_s, v);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content:
+                        Text(added ? 'حُفظت الآية' : 'أُزيلت من المحفوظات')));
               }
             },
           ),

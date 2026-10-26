@@ -161,7 +161,10 @@ class _AdhanCatalogScreenState extends State<AdhanCatalogScreen> {
             ),
             Expanded(
               child: list.isEmpty
-                  ? const Center(child: Text('لا توجد نتائج.'))
+                  ? Center(
+                      child: Text(AdhanCatalog.disabled
+                          ? 'قائمة المؤذنين متوقفة مؤقتًا.'
+                          : 'لا توجد نتائج.'))
                   : ListView.builder(
                       itemCount: list.length,
                       itemBuilder: (context, i) {

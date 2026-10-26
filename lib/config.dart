@@ -1,5 +1,6 @@
 /// إعدادات المسجد. عدّل القيم هنا فقط.
 class MosqueConfig {
+  static const privacyUrl = 'https://kansafra.alamin.se/privacy.html';
   static const messengerUrl = 'https://m.me/kansafra.mosque';
   static const facebookUrl = 'https://www.facebook.com/kansafra.mosque/';
 

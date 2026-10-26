@@ -19,7 +19,8 @@ class AdhanVoice {
 
   String rawName(bool long) =>
       'adhan_${raw}_${long && hasLong ? 'long' : 'short'}';
-  String asset(bool long) => 'assets/adhan/${rawName(long)}.mp3';
+  // المعاينة داخل التطبيق دائمًا بالنسخة القصيرة (النسخة الكاملة في res/raw للإشعار فقط)، فيصغر التطبيق.
+  String get previewAsset => 'assets/adhan/adhan_${raw}_short.mp3';
 }
 
 const _baseVoices = <AdhanVoice>[
