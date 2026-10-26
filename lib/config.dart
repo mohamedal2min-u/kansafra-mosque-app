@@ -44,7 +44,8 @@ class MosqueConfig {
       logo: 'assets/pay/shamcash.png',
       // رقم الحساب مأخوذ من رمز QR المرسل من لجنة المسجد.
       details: '1dff3aa4e6d84e983b48c4f8ad6480b8',
-      holder: 'توفيق أبو محمد',
+      // الاسم كما يظهر للمرسِل داخل تطبيق شام كاش (Account Info).
+      holder: 'توفيق محمد الخليل',
     ),
     DonationMethod(
         title: 'بطاقات الدفع',
