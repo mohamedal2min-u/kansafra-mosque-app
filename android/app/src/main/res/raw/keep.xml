@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- أصوات الأذان تُستدعى بالاسم وقت التشغيل (RawResourceAndroidNotificationSound)، فيحذفها مُصغِّر الموارد في نسخة الإصدار.
+     هذا الملف يمنع الحذف. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@raw/adhan_*" />
