@@ -44,7 +44,13 @@ class Identity extends ChangeNotifier {
     if (!googleEnabled) return;
     try {
       _user = await _gsi.signInSilently();
-      if (_user != null) await claimDeviceHistory();
+      // نقل سجل الهاتف يكفي مرة لكل حساب، لا عند كل فتح للتطبيق.
+      final p = await SharedPreferences.getInstance();
+      final key = 'claimed:${_user?.id}';
+      if (_user != null && !(p.getBool(key) ?? false)) {
+        await claimDeviceHistory();
+        await p.setBool(key, true);
+      }
       notifyListeners();
     } catch (_) {}
   }

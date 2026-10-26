@@ -28,6 +28,8 @@ class Khatma extends ChangeNotifier {
   static const _kLastRead = 'khatma_last_read';
   static const _kGoalDays = 'khatma_goal_days';
   static const _kGoalStart = 'khatma_goal_start';
+  static const _kDayStart =
+      'khatma_day_start'; // 'تاريخ|موضع' أول اليوم لحساب ورد اليوم
   static const _baseId = 7000; // معرّفات إشعارات الختمة (لا تتعارض مع الأذان)
   static const _days = 14;
 
@@ -37,6 +39,7 @@ class Khatma extends ChangeNotifier {
   bool _loaded = false;
   int? goalDays; // هدف: ختمة في كذا يومًا
   DateTime? goalStart;
+  int _dayStartAbs = 0; // موضع القارئ في أول اليوم (ترتيب الآية في المصحف)
 
   Future<void> load() async {
     if (_loaded) return;
@@ -53,6 +56,12 @@ class Khatma extends ChangeNotifier {
         hour: p.getInt(_kHour) ?? 20, minute: p.getInt(_kMinute) ?? 0);
     // نص السور مطلوب لعرض اسم السورة في العلامة وفي التذكير؛ نحمّله فقط إن وُجدت علامة.
     if (mark.value != null) await QuranData.load();
+    final ds = (p.getString(_kDayStart) ?? '').split('|');
+    if (ds.length == 2 && ds[0] == _today()) {
+      _dayStartAbs = int.tryParse(ds[1]) ?? 0;
+    } else {
+      await _startDay(p, _abs(mark.value));
+    }
     _loaded = true;
   }
 
@@ -61,11 +70,30 @@ class Khatma extends ChangeNotifier {
     return '${n.year}-${n.month}-${n.day}';
   }
 
+  static int _abs(Bookmark? b) =>
+      b == null ? 0 : QuranData.absIndex(b.surah, b.verse);
+
+  Future<void> _startDay(SharedPreferences p, int abs) async {
+    _dayStartAbs = abs;
+    await p.setString(_kDayStart, '${_today()}|$abs');
+  }
+
   /// وضع العلامة = قرأ اليوم، فلا يُذكَّر اليوم ويبدأ التذكير من الغد.
   Future<void> setMark(int surah, int verse) async {
     await load();
-    mark.value = Bookmark(surah, verse);
     final p = await SharedPreferences.getInstance();
+    // أول علامة في يوم جديد: يبدأ ورد اليوم من الموضع السابق (أو من هنا إن لم توجد علامة قبلها).
+    final ds = (p.getString(_kDayStart) ?? '').split('|');
+    if (ds.isEmpty || ds[0] != _today()) {
+      await _startDay(
+          p,
+          mark.value == null
+              ? QuranData.absIndex(surah, verse)
+              : _abs(mark.value));
+    } else if (mark.value == null) {
+      await _startDay(p, QuranData.absIndex(surah, verse));
+    }
+    mark.value = Bookmark(surah, verse);
     await p.setString(_kMark, jsonEncode({'s': surah, 'v': verse}));
     await p.setString(_kLastRead, _today());
     notifyListeners();
@@ -130,14 +158,20 @@ class Khatma extends ChangeNotifier {
     return left < 1 ? 1 : left;
   }
 
-  /// عدد الآيات المطلوب قراءتها اليوم لإنهاء الهدف في موعده.
+  /// ورد اليوم: الآيات المطلوبة اليوم لإنهاء الهدف في موعده، محسوبة من موضعك أول اليوم
+  /// (فلا يتغيّر الرقم وأنت تقرأ).
   int? get dailyVerses {
     final left = daysLeft;
-    final m = mark.value;
     if (left == null) return null;
-    final remaining = QuranData.totalVerses -
-        (m == null ? 0 : QuranData.absIndex(m.surah, m.verse));
+    if (_abs(mark.value) >= QuranData.totalVerses) return 0; // اكتملت الختمة
+    final remaining = QuranData.totalVerses - _dayStartAbs;
     return remaining <= 0 ? 0 : (remaining / left).ceil();
+  }
+
+  /// كم آية قرأ اليوم (بحسب تقدّم العلامة منذ أول اليوم).
+  int get readToday {
+    final r = _abs(mark.value) - _dayStartAbs;
+    return r < 0 ? 0 : r;
   }
 
   /// يجدول تذكيرًا لكل يوم من الأيام القادمة (14 يومًا) بوقت واحد، ويتخطى اليوم إن كان قد قرأ.
@@ -152,13 +186,14 @@ class Khatma extends ChangeNotifier {
       final m = mark.value;
       if (!remind || m == null) return;
       final p = await SharedPreferences.getInstance();
-      final readToday = p.getString(_kLastRead) == _today();
-      final now = tz.TZDateTime.now(tz.local);
+      final doneToday = p.getString(_kLastRead) == _today();
+      // وقت التذكير بساعة الهاتف (عادة شخصية)، لا بتوقيت المسجد.
+      final now = DateTime.now();
       for (var d = 0; d < _days; d++) {
-        final day = now.add(Duration(days: d));
-        final at = tz.TZDateTime(
-            tz.local, day.year, day.month, day.day, time.hour, time.minute);
-        if (at.isBefore(now) || (d == 0 && readToday)) continue;
+        final local =
+            DateTime(now.year, now.month, now.day + d, time.hour, time.minute);
+        if (local.isBefore(now) || (d == 0 && doneToday)) continue;
+        final at = tz.TZDateTime.from(local, tz.local);
         await plugin.zonedSchedule(
           _baseId + d,
           'وردك اليومي من القرآن',

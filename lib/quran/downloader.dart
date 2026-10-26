@@ -72,8 +72,9 @@ class QuranDownloader extends ChangeNotifier {
       // قد يكون المشغّل يقرأ ملفات قارئ آخر سنحذفها: نوقفه أولًا.
       final qp = QuranPlayer.instance;
       if (qp.surah != null &&
-          (qp.reciter?.id != r.id || qp.moshaf?.name != m.name))
+          (qp.reciter?.id != r.id || qp.moshaf?.name != m.name)) {
         await qp.stop();
+      }
       await AudioStore.keepOnly(r, m); // قارئ واحد فقط
       await AudioStore.setPinned(r, m);
       total = m.surahs.length;
@@ -91,8 +92,10 @@ class QuranDownloader extends ChangeNotifier {
         done++;
         notifyListeners();
       }
+    } on TimeoutException {
+      error = 'توقّف التحميل بسبب ضعف الاتصال. اضغط «متابعة» لإكماله.';
     } catch (e) {
-      error = 'تعذّر التنزيل: $e';
+      error = 'تعذّر التحميل. تحقّق من الاتصال ثم اضغط «متابعة».';
     } finally {
       client.close();
       running = false;
@@ -108,13 +111,20 @@ class QuranDownloader extends ChangeNotifier {
     if (resp.statusCode != 200) throw Exception('HTTP ${resp.statusCode}');
     final sink = tmp.openWrite();
     try {
-      await for (final chunk in resp.stream) {
+      // إن توقّف وصول البيانات 30 ثانية نعتبره انقطاعًا بدل الانتظار إلى ما لا نهاية.
+      await for (final chunk
+          in resp.stream.timeout(const Duration(seconds: 30))) {
         if (_cancel) break;
         sink.add(chunk);
       }
-    } finally {
+    } catch (_) {
       await sink.close();
+      if (await tmp.exists()) {
+        await tmp.delete(); // لا نترك ملفًا ناقصًا يشغل المساحة
+      }
+      rethrow;
     }
+    await sink.close();
     if (_cancel) {
       if (await tmp.exists()) await tmp.delete();
       return;
@@ -129,8 +139,9 @@ class QuranDownloader extends ChangeNotifier {
 
   Future<void> deleteAll() async {
     _cancel = true;
-    if (QuranPlayer.instance.surah != null)
+    if (QuranPlayer.instance.surah != null) {
       await QuranPlayer.instance.stop(); // قد يقرأ ملفات سنحذفها
+    }
     await AudioStore.clearAll();
     done = 0;
     total = 0;

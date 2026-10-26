@@ -110,8 +110,37 @@ class ReciterApi {
           },
       ]);
 
+  /// النسخة المحفوظة تُعرض فورًا (بلا انتظار للشبكة)، وتُحدَّث في الخلفية للمرة القادمة.
+  /// بلا نسخة محفوظة: ننتظر الشبكة (أول تشغيل فقط).
   static Future<List<Reciter>> load() async {
     if (_cache != null) return _cache!;
+    try {
+      final cached =
+          (await SharedPreferences.getInstance()).getString(_cacheKey);
+      if (cached != null) {
+        _cache = await compute(_fromCache, cached);
+        _refresh(); // تحديث هادئ دون انتظار
+        return _cache!;
+      }
+    } catch (_) {}
+    final fresh = await _fetch();
+    return _cache = fresh;
+  }
+
+  static bool _refreshing = false;
+  static Future<void> _refresh() async {
+    if (_refreshing) return;
+    _refreshing = true;
+    try {
+      _cache = await _fetch();
+    } catch (_) {
+      // نبقى على المحفوظ.
+    } finally {
+      _refreshing = false;
+    }
+  }
+
+  static Future<List<Reciter>> _fetch() async {
     Object? err;
     for (final host in _hosts) {
       try {
@@ -119,11 +148,10 @@ class ReciterApi {
             .get(Uri.parse('$host/reciters?language=ar'), headers: const {
           'Accept': 'application/json',
           'User-Agent': 'Mozilla/5.0 (Linux; Android 13) KansafraMosque/1.0',
-        }).timeout(const Duration(seconds: 60));
+        }).timeout(const Duration(seconds: 25));
         if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
         final list = _parse(await compute(_decode, res.bodyBytes));
         if (list.isEmpty) throw Exception('قائمة القرّاء فارغة');
-        _cache = list;
         try {
           (await SharedPreferences.getInstance())
               .setString(_cacheKey, _toCache(list));
@@ -134,12 +162,6 @@ class ReciterApi {
         err = e;
       }
     }
-    // لا إنترنت أو فشل الخادم: استخدم آخر نسخة محفوظة إن وُجدت.
-    try {
-      final cached =
-          (await SharedPreferences.getInstance()).getString(_cacheKey);
-      if (cached != null) return _cache = _fromCache(cached);
-    } catch (_) {}
     lastError = '$err';
     throw err!;
   }

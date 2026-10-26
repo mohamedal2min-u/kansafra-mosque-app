@@ -2,7 +2,7 @@ import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:timezone/data/latest_10y.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../config.dart';
@@ -11,12 +11,13 @@ import '../quran/khatma.dart';
 import 'diag_log.dart';
 import 'prayer_calc.dart';
 
-/// جدولة تنبيه الأذان لخمس صلوات على مدى 7 أيام، وتُعاد الجدولة عند كل فتح للتطبيق.
+/// جدولة تنبيه الأذان لخمس صلوات على مدى 10 أيام، وتُعاد الجدولة عند فتح التطبيق في يوم جديد.
 class AdhanService {
   AdhanService._();
   static final instance = AdhanService._();
 
-  static const _days = 7;
+  static const _days =
+      10; // تبقى التنبيهات صالحة 10 أيام حتى لو لم يُفتح التطبيق
   final _plugin = FlutterLocalNotificationsPlugin();
   FlutterLocalNotificationsPlugin get plugin => _plugin;
 
@@ -59,7 +60,15 @@ class AdhanService {
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     await android?.requestNotificationsPermission();
-    await android?.requestExactAlarmsPermission();
+    // طلب «التنبيه الدقيق» يفتح صفحة إعدادات النظام، فنطلبه مرة واحدة فقط (أول تشغيل)،
+    // وبعدها يبقى زر التفعيل في الإعدادات وفي «تشخيص التطبيق».
+    final prefs = await SharedPreferences.getInstance();
+    if (!(prefs.getBool('exact_asked') ?? false)) {
+      await prefs.setBool('exact_asked', true);
+      if (!((await android?.canScheduleExactNotifications()) ?? true)) {
+        await android?.requestExactAlarmsPermission();
+      }
+    }
 
     try {
       await scheduleAll();
@@ -123,7 +132,8 @@ class AdhanService {
   Future<void> scheduleTest({int seconds = 10}) async {
     final sound = await AppSettings.adhanChoice();
     final at = tz.TZDateTime.now(tz.local).add(Duration(seconds: seconds));
-    final raw = sound.rawNameFor('fajr', at.millisecondsSinceEpoch ~/ 86400000);
+    final raw = sound.rawNameFor('fajr',
+        PrayerCalc.wall(DateTime.now()).millisecondsSinceEpoch ~/ 86400000);
     await _zoned(9999, 'تجربة الأذان', 'هكذا سيُسمع التنبيه في وقت الصلاة', at,
         _details(sound, raw));
   }
@@ -132,43 +142,40 @@ class AdhanService {
   Future<int> pendingCount() async =>
       (await _plugin.pendingNotificationRequests()).length;
 
-  /// يجدول 7 أيام من التنبيهات. لا يعيد الجدولة (35 منبّهًا) عند كل فتح للتطبيق،
+  /// يجدول 10 أيام من التنبيهات. لا يعيد الجدولة (50 منبّهًا) عند كل فتح للتطبيق،
   /// بل عند تغيّر اليوم أو الإعدادات أو [force]: توفير للبطارية والمعالج.
   /// لا نحفظ «بصمة» الجدولة إلا بعد نجاحها، فإن فشلت تُعاد المحاولة في الفتح التالي.
   Future<void> scheduleAll({bool force = false}) async {
     final enabled = await AppSettings.adhanEnabled();
     final sound = await AppSettings.adhanChoice();
-    final now0 = DateTime.now();
+    final now0 = PrayerCalc.mosqueNow();
+    // v2: بعد إصلاح فرق التوقيت، فتُعاد جدولة التنبيهات القديمة الخاطئة عند أول فتح.
     final signature =
-        '${now0.year}-${now0.month}-${now0.day}|$enabled|${sound.id}|'
+        'v2|${now0.year}-${now0.month}-${now0.day}|$enabled|${sound.id}|'
         '${MosqueConfig.latitude},${MosqueConfig.longitude}|${MosqueConfig.minuteAdjustments}';
     final prefs = await SharedPreferences.getInstance();
     if (!force && prefs.getString('sched_sig') == signature) return;
 
     try {
-      await _plugin.cancelAll();
+      // نلغي تنبيهات الأذان فقط (1..أيام×5)، لا تذكير الختمة ولا غيره.
+      for (var i = 1; i <= _days * 5; i++) {
+        await _plugin.cancel(i);
+      }
       await prefs.remove('sched_sig');
       if (enabled) {
-        final now = tz.TZDateTime.now(tz.local);
+        final now = DateTime.now();
+        final today = PrayerCalc.mosqueNow();
         var id = 0;
         for (var d = 0; d < _days; d++) {
-          final day = now.add(Duration(days: d));
-          final times = PrayerCalc.forDate(day);
-          final list = {
-            'fajr': times.fajr,
-            'dhuhr': times.dhuhr,
-            'asr': times.asr,
-            'maghrib': times.maghrib,
-            'isha': times.isha,
-          };
-          for (final e in list.entries) {
-            final at = tz.TZDateTime.from(
-                PrayerCalc.adjusted(e.key, e.value), tz.local);
+          final times = PrayerCalc.day(today.add(Duration(days: d)));
+          for (final k in PrayerCalc.names.keys) {
             id++;
-            if (at.isBefore(now)) continue;
-            final raw =
-                sound.rawNameFor(e.key, at.millisecondsSinceEpoch ~/ 86400000);
-            await _zoned(id, 'حان الآن موعد أذان ${PrayerCalc.names[e.key]}',
+            final instant = times[k]!;
+            if (!instant.isAfter(now)) continue;
+            final at = tz.TZDateTime.from(instant, tz.local);
+            final raw = sound.rawNameFor(
+                k, PrayerCalc.wall(instant).millisecondsSinceEpoch ~/ 86400000);
+            await _zoned(id, 'حان الآن موعد أذان ${PrayerCalc.names[k]}',
                 MosqueConfig.name, at, _details(sound, raw));
           }
         }

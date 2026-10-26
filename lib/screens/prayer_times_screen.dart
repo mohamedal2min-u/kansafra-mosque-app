@@ -74,45 +74,22 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
     super.dispose();
   }
 
-  Map<String, DateTime> _times(DateTime d) {
-    final t = PrayerCalc.forDate(d);
-    final raw = {
-      'fajr': t.fajr,
-      'sunrise': t.sunrise,
-      'dhuhr': t.dhuhr,
-      'asr': t.asr,
-      'maghrib': t.maghrib,
-      'isha': t.isha,
-    };
-    return {
-      for (final e in raw.entries) e.key: PrayerCalc.adjusted(e.key, e.value)
-    };
-  }
-
-  /// يحسب مواقيت اليوم مرة واحدة، ويُعاد الحساب عند تغيّر اليوم أو بعد مرور الصلاة القادمة فقط.
+  /// يحسب مواقيت يوم المسجد مرة واحدة، ويُعاد الحساب عند تغيّر اليوم أو بعد مرور الصلاة القادمة فقط.
+  /// كل الأوقات لحظات حقيقية؛ العرض بتوقيت المسجد عبر PrayerCalc.wall.
   void _compute(DateTime now) {
-    _day = DateTime(now.year, now.month, now.day);
-    _today = _times(now);
-    String? key;
-    for (final k in _order) {
-      if (_today[k]!.isAfter(now)) {
-        key = k;
-        break;
-      }
-    }
-    if (key == null) {
-      _nextKey = 'fajr';
-      _nextTime = _times(now.add(const Duration(days: 1)))['fajr']!;
-    } else {
-      _nextKey = key;
-      _nextTime = _today[key]!;
-    }
+    final w = PrayerCalc.wall(now);
+    _day = DateTime(w.year, w.month, w.day);
+    _today = PrayerCalc.day(_day);
+    final (k, t) = PrayerCalc.next(now);
+    _nextKey = k;
+    _nextTime = t;
   }
 
   void _tick() {
     final now = DateTime.now();
+    final w = PrayerCalc.wall(now);
     final sameDay =
-        now.year == _day.year && now.month == _day.month && now.day == _day.day;
+        w.year == _day.year && w.month == _day.month && w.day == _day.day;
     if (!sameDay || !_nextTime.isAfter(now)) {
       final old = _nextKey;
       _compute(now);
@@ -127,7 +104,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat.jm('ar');
-    final now = DateTime.now();
+    final now = PrayerCalc.mosqueNow(); // التاريخ بتوقيت المسجد
     final h = HijriCalendar.fromDate(now);
     final scheme = Theme.of(context).colorScheme;
 
@@ -170,7 +147,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
                   style: const TextStyle(
                       fontWeight: FontWeight.w700, fontSize: 16)),
               subtitle: k == _nextKey ? const Text('الصلاة القادمة') : null,
-              trailing: Text(fmt.format(_today[k]!),
+              trailing: Text(fmt.format(PrayerCalc.wall(_today[k]!)),
                   style: Theme.of(context)
                       .textTheme
                       .titleMedium
@@ -194,7 +171,7 @@ class _NextPrayerCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(22),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,

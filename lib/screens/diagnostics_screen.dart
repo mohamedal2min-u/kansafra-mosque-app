@@ -1,6 +1,5 @@
 import 'dart:ui' as ui;
 
-import 'package:adhan/adhan.dart' show Prayer;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -50,14 +49,9 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
     final p = await SharedPreferences.getInstance();
     final ok = p.getString('sched_last_ok');
     final sound = await AppSettings.adhanChoice();
-    final now = DateTime.now();
-    final times = PrayerCalc.forDate(now);
-    String next = '—';
-    final nextPrayer = times.nextPrayer();
-    if (nextPrayer != Prayer.none) {
-      final t = times.timeForPrayer(nextPrayer)!;
-      next = '${_name(nextPrayer)} ${DateFormat.jm('ar').format(t)}';
-    }
+    final (nk, nt) = PrayerCalc.next();
+    final next =
+        '${PrayerCalc.names[nk]} ${DateFormat.jm('ar').format(PrayerCalc.wall(nt))}';
     final log = await DiagLog.list();
     if (!mounted) return;
     setState(() {
@@ -71,16 +65,6 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
       _log = log;
     });
   }
-
-  static String _name(Prayer p) => switch (p) {
-        Prayer.fajr => 'الفجر',
-        Prayer.sunrise => 'الشروق',
-        Prayer.dhuhr => 'الظهر',
-        Prayer.asr => 'العصر',
-        Prayer.maghrib => 'المغرب',
-        Prayer.isha => 'العشاء',
-        _ => '—',
-      };
 
   void _msg(String t) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t)));
@@ -164,7 +148,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                     child: const Text('تفعيل'))
                 : null),
         _row(Icons.event_available_rounded, 'الأذان المجدول',
-            '${_pending ?? '؟'} تنبيه (المتوقع نحو 35)\nآخر جدولة ناجحة: $_lastOk',
+            '${_pending ?? '؟'} تنبيه (المتوقع نحو 50)\nآخر جدولة ناجحة: $_lastOk',
             ok: _pending == null ? null : _pending! > 0),
         _row(Icons.access_time_rounded, 'أقرب صلاة', _next),
         _row(Icons.music_note_rounded, 'الصوت المختار', _sound),

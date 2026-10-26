@@ -82,8 +82,9 @@ class AdhanCatalog {
     final out = <String>{};
     await for (final e in (await _dir()).list()) {
       final n = e.uri.pathSegments.last;
-      if (e is File && n.startsWith('adhan_dl_') && n.endsWith('.mp3'))
+      if (e is File && n.startsWith('adhan_dl_') && n.endsWith('.mp3')) {
         out.add(n.substring(9, n.length - 4));
+      }
     }
     return out;
   }
@@ -95,8 +96,9 @@ class AdhanCatalog {
       final res = await http
           .get(Uri.parse(v.url), headers: _headers)
           .timeout(const Duration(seconds: 60));
-      if (res.statusCode != 200)
+      if (res.statusCode != 200) {
         throw Exception('تعذّر التحميل (HTTP ${res.statusCode})');
+      }
       final tmp = File('${f.path}.dl');
       await tmp.writeAsBytes(res.bodyBytes, flush: true);
       await tmp.rename(f.path);

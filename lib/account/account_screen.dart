@@ -319,8 +319,9 @@ class _ReadingCard extends StatelessWidget {
     return FutureBuilder<void>(
       future: ReadingStats.instance.load(),
       builder: (context, snap) {
-        if (snap.connectionState != ConnectionState.done)
+        if (snap.connectionState != ConnectionState.done) {
           return const SizedBox.shrink();
+        }
         final st = ReadingStats.instance;
         final week = st.lastWeek;
         final maxV = week.fold<int>(1, (a, b) => b > a ? b : a);

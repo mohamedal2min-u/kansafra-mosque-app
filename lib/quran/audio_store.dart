@@ -73,8 +73,9 @@ class AudioStore {
     if (!supported) return;
     final prefix = _prefix(r, m);
     await for (final e in (await _root()).list()) {
-      if (e is File && !e.uri.pathSegments.last.startsWith(prefix))
+      if (e is File && !e.uri.pathSegments.last.startsWith(prefix)) {
         await e.delete();
+      }
     }
   }
 

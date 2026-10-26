@@ -112,8 +112,9 @@ class _AdhanCatalogScreenState extends State<AdhanCatalogScreen> {
       body: FutureBuilder<List<OnlineAdhan>>(
         future: _future,
         builder: (context, snap) {
-          if (snap.connectionState != ConnectionState.done)
+          if (snap.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
+          }
           if (snap.hasError) {
             return Center(
               child: Column(mainAxisSize: MainAxisSize.min, children: [

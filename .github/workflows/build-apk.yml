@@ -46,7 +46,7 @@ jobs:
           printf 'storeFile=release.jks\nstorePassword=%s\nkeyPassword=%s\nkeyAlias=kansafra\n' "$KS_PASS" "$KS_PASS" > android/key.properties
           echo "::notice::SIGNING=release-key (base64 length $len)"
       - run: flutter pub get
-      - run: flutter analyze --no-fatal-infos
+      - run: flutter analyze
       - run: flutter test
       - name: Build APK
         run: |

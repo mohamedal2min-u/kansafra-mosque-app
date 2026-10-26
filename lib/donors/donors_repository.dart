@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '../account/identity.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config.dart';
 
 /// متبرع في القائمة. إن كان [name] فارغًا يُعرض «فاعل خير».
@@ -63,7 +63,6 @@ List<TopDonor> topDonors(List<Donor> donors, {int n = 3}) {
 
 abstract class DonorsRepository {
   Future<List<Donor>> donors();
-  Future<void> add({String? name, String? amount});
 }
 
 /// قائمة مشتركة عبر جدول Google Sheets و Apps Script (انظر tools/DONORS_SETUP.md).
@@ -80,24 +79,25 @@ class SheetsDonorsRepository implements DonorsRepository {
           ),
       ];
 
+  static const _cacheKey = 'donors_cache_v1';
+
+  /// يجلب القائمة ويحفظ نسخة؛ بلا إنترنت تُعرض آخر نسخة محفوظة.
   @override
   Future<List<Donor>> donors() async {
-    final res =
-        await http.get(Uri.parse(url)).timeout(const Duration(seconds: 20));
-    if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
-    return _parse(utf8.decode(res.bodyBytes));
-  }
-
-  @override
-  Future<void> add({String? name, String? amount}) async {
-    final uri = Uri.parse(url).replace(queryParameters: {
-      'action': 'add',
-      'name': name ?? '',
-      'amount': amount ?? '',
-      ...await Identity.instance.params(),
-    });
-    final res = await http.get(uri).timeout(const Duration(seconds: 20));
-    if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
+    final prefs = await SharedPreferences.getInstance();
+    try {
+      final res =
+          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+      if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
+      final body = utf8.decode(res.bodyBytes);
+      final list = _parse(body);
+      await prefs.setString(_cacheKey, body);
+      return list;
+    } catch (e) {
+      final cached = prefs.getString(_cacheKey);
+      if (cached != null) return _parse(cached);
+      rethrow;
+    }
   }
 }
 
@@ -107,10 +107,6 @@ class InMemoryDonorsRepository implements DonorsRepository {
 
   @override
   Future<List<Donor>> donors() async => List.unmodifiable(_list.reversed);
-
-  @override
-  Future<void> add({String? name, String? amount}) async => _list
-      .add(Donor(name: name ?? '', amount: amount ?? '', date: DateTime.now()));
 }
 
 final DonorsRepository donorsRepository = MosqueConfig.donorsUrl.isEmpty

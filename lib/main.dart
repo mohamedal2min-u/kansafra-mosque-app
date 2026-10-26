@@ -1,8 +1,5 @@
-import 'dart:ui' show PlatformDispatcher;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:just_audio_background/just_audio_background.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'account/account_screen.dart';
@@ -12,6 +9,7 @@ import 'settings.dart';
 import 'services/adhan_service.dart';
 import 'services/diag_log.dart';
 import 'quran/mini_player.dart';
+import 'quran/player.dart';
 import 'quran/quran_home.dart';
 import 'screens/donations_screen.dart';
 import 'screens/settings_screen.dart';
@@ -23,7 +21,7 @@ Future<void> main() async {
   // نسجّل الأخطاء غير المعالجة في سجل محلي يظهر في «تشخيص التطبيق» (الإعدادات).
   final oldHandler = FlutterError.onError;
   FlutterError.onError = (details) {
-    DiagLog.add('${details.exceptionAsString()}');
+    DiagLog.add(details.exceptionAsString());
     oldHandler?.call(details);
   };
   PlatformDispatcher.instance.onError = (error, stack) {
@@ -38,16 +36,8 @@ Future<void> main() async {
     WidgetsBinding.instance
         .addPostFrameCallback((_) => AdhanService.instance.init());
   }
-  // تشغيل القرآن في الخلفية بخدمة مقدّمة (إشعار تحكم) حتى لا يوقفه النظام.
-  if (!kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS)) {
-    await JustAudioBackground.init(
-      androidNotificationChannelId: 'org.kansafra.kansafra_mosque.audio',
-      androidNotificationChannelName: 'تشغيل القرآن',
-      androidNotificationOngoing: true,
-    );
-  }
+  // خدمة تشغيل القرآن في الخلفية: تبدأ تهيئتها الآن دون أن تؤخر فتح التطبيق، والمشغّل نفسه لا يُنشأ إلا عند أول استماع.
+  QuranPlayer.initBackground();
   await ThemeController.load();
   Identity.instance.restore();
   runApp(const MosqueApp());

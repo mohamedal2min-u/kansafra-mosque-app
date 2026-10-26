@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'player.dart';
+import 'quran_data.dart';
 import 'radios.dart';
 
 /// البث المباشر: إذاعات القرآن الكريم المعروفة ثم إذاعات القرّاء والتفسير.
@@ -22,10 +23,14 @@ class _RadioScreenState extends State<RadioScreen> {
     return FutureBuilder<List<RadioStation>>(
       future: _future,
       builder: (context, snap) {
-        if (snap.connectionState != ConnectionState.done)
+        if (snap.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
+        }
         final all = snap.data ?? const <RadioStation>[];
-        final list = all.where((r) => r.name.contains(_query)).toList();
+        final q = QuranData.normalize(_query);
+        final list = all
+            .where((r) => q.isEmpty || QuranData.normalize(r.name).contains(q))
+            .toList();
         return Column(children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),

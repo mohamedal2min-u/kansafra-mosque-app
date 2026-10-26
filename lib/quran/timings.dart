@@ -31,8 +31,9 @@ class VerseTimings {
         final res = await http
             .get(Uri.parse('$h$path'), headers: _headers)
             .timeout(const Duration(seconds: 15));
-        if (res.statusCode == 200)
+        if (res.statusCode == 200) {
           return jsonDecode(utf8.decode(res.bodyBytes));
+        }
       } catch (_) {}
     }
     return null;
@@ -49,8 +50,9 @@ class VerseTimings {
     final n = _norm(r.name);
     for (final e in _reads!) {
       final en = _norm('${e['name'] ?? ''}');
-      if (en.isNotEmpty && (en == n || n.contains(en) || en.contains(n)))
+      if (en.isNotEmpty && (en == n || n.contains(en) || en.contains(n))) {
         return (e['id'] as num?)?.toInt();
+      }
     }
     return null;
   }
@@ -67,8 +69,9 @@ class VerseTimings {
         final d = await _get('/ayat_timing?surah=$surah&read=$id');
         final list =
             d is Map ? (d['ayat_timing'] ?? d['data'] ?? d['timings']) : d;
-        if (list is List)
+        if (list is List) {
           out = _parse(list, QuranData.verseCount(surah), audioDuration);
+        }
       }
     } catch (_) {
       out = null;
@@ -91,8 +94,9 @@ class VerseTimings {
     var scale = 1;
     final ms = audio.inMilliseconds;
     // بعض الخدمات تعطي الثواني بدل المللي ثانية.
-    if (lastEnd > 0 && (lastEnd * 1000 - ms).abs() < (lastEnd - ms).abs())
+    if (lastEnd > 0 && (lastEnd * 1000 - ms).abs() < (lastEnd - ms).abs()) {
       scale = 1000;
+    }
     final out = [for (var i = 1; i <= verses; i++) (starts[i] ?? -1) * scale];
     for (var i = 0; i < out.length; i++) {
       if (out[i] < 0 || (i > 0 && out[i] < out[i - 1])) return null;

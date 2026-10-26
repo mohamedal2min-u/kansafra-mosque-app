@@ -32,11 +32,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     () async {
       final c = await AppSettings.adhanChoice();
       final e = await AppSettings.adhanEnabled();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _choice = c;
           _enabled = e;
         });
+      }
     }();
   }
 

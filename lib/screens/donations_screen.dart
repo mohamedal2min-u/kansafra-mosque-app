@@ -29,8 +29,7 @@ class _DonationsScreenState extends State<DonationsScreen> {
     return Column(children: [
       Expanded(child: DonorsList(key: _listKey)),
       Padding(
-        padding: const EdgeInsets.fromLTRB(
-            16, 8, 16, 30), // مسافة فوق الزر الأوسط البارز
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
         child: FilledButton.icon(
           style: FilledButton.styleFrom(
             backgroundColor: scheme.tertiary,

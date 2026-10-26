@@ -116,7 +116,7 @@ class _SurahListScreenState extends State<SurahListScreen> {
               const SizedBox(height: 4),
               Text(
                 '${(k.progress * 100).toStringAsFixed(1)}٪ من المصحف'
-                '${left == null ? '' : ' • المتبقي $left يومًا${daily == null || daily == 0 ? '' : ' • وردك اليوم نحو $daily آية'}'}',
+                '${left == null ? '' : ' • المتبقي $left يومًا${daily == null || daily == 0 ? '' : ' • ورد اليوم: ${k.readToday} من $daily آية'}'}',
                 style: tt.bodySmall?.copyWith(color: cs.onPrimaryContainer),
               ),
               const SizedBox(height: 10),
@@ -431,13 +431,16 @@ class _SurahReaderScreenState extends State<SurahReaderScreen>
         p.surah != _s ||
         dur == null ||
         dur.inMilliseconds == 0 ||
-        _cum == null) return;
+        _cum == null) {
+      return;
+    }
     if (!_timingsAsked && p.reciter != null) {
       _timingsAsked = true;
       final asked = _s;
       VerseTimings.load(p.reciter!, asked, dur).then((t) {
-        if (mounted && _s == asked)
+        if (mounted && _s == asked) {
           _starts = t; // تجاهل النتيجة إن انتقلنا لسورة أخرى
+        }
       });
     }
     final frac = (pos.inMilliseconds / dur.inMilliseconds).clamp(0.0, 1.0);

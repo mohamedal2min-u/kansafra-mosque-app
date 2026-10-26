@@ -44,15 +44,27 @@ class RadioApi {
       final url = '${r['url'] ?? ''}';
       if (name.isEmpty || url.isEmpty) continue;
       // ترجمات المعاني بلغات أخرى لا تخص أهل البلدة، والإذاعات المعروفة مضافة في الأعلى.
-      if (name.startsWith('ترجمة') || featured.any((f) => f.url == url))
+      if (name.startsWith('ترجمة') || featured.any((f) => f.url == url)) {
         continue;
+      }
       out.add(RadioStation((r['id'] as num?)?.toInt() ?? 0, name, url));
     }
     return out;
   }
 
+  /// المحفوظ يُعرض فورًا ويُحدَّث في الخلفية؛ بلا محفوظ ننتظر الشبكة.
   static Future<List<RadioStation>> load() async {
     final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString(_cacheKey);
+    if (cached != null) {
+      _fetch(prefs); // تحديث هادئ للمرة القادمة
+      return [...featured, ..._parse(cached)];
+    }
+    final body = await _fetch(prefs);
+    return [...featured, if (body != null) ..._parse(body)];
+  }
+
+  static Future<String?> _fetch(SharedPreferences prefs) async {
     for (final h in _hosts) {
       try {
         final res = await http
@@ -60,13 +72,11 @@ class RadioApi {
             .timeout(const Duration(seconds: 25));
         if (res.statusCode != 200) continue;
         final body = utf8.decode(res.bodyBytes);
-        final list = _parse(body);
-        if (list.isEmpty) continue;
+        if (_parse(body).isEmpty) continue;
         await prefs.setString(_cacheKey, body);
-        return [...featured, ...list];
+        return body;
       } catch (_) {}
     }
-    final cached = prefs.getString(_cacheKey);
-    return [...featured, if (cached != null) ..._parse(cached)];
+    return null;
   }
 }

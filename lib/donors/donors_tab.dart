@@ -42,8 +42,10 @@ class _DonorsListState extends State<DonorsList> {
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   const Text('تعذّر تحميل القائمة. تحقّق من الإنترنت.'),
                   const SizedBox(height: 12),
-                  FilledButton(
-                      onPressed: _reload, child: const Text('إعادة المحاولة')),
+                  TextButton.icon(
+                      onPressed: _reload,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('إعادة المحاولة')),
                 ]),
               );
             }

@@ -72,13 +72,6 @@ class _ListenScreenState extends State<ListenScreen> {
               const Text(
                   'تعذّر تحميل قائمة القرّاء.\nالقراءة تعمل بدون إنترنت.',
                   textAlign: TextAlign.center),
-              if (ReciterApi.lastError != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-                  child: SelectableText(ReciterApi.lastError!,
-                      textDirection: TextDirection.ltr,
-                      style: const TextStyle(fontSize: 11)),
-                ),
               const SizedBox(height: 12),
               Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 48),
@@ -93,7 +86,10 @@ class _ListenScreenState extends State<ListenScreen> {
         final list = snap.data!
             .where((r) => !_onlyFav || _favs.contains(r.id))
             .where((r) => _tag == ReciterTag.all || r.tags.contains(_tag))
-            .where((r) => r.name.contains(_query))
+            .where((r) =>
+                _query.isEmpty ||
+                QuranData.normalize(r.name)
+                    .contains(QuranData.normalize(_query)))
             .toList();
         return Column(children: [
           Padding(

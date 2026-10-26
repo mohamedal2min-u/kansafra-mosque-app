@@ -19,8 +19,13 @@ void main() {
     expect(k.mark.value?.label, 'سورة الفاتحة، آية 1');
     await k.setGoal(30);
     expect(k.daysLeft, 30);
-    // ما تبقى 6235 آية على 30 يومًا
+    // أول اليوم عند الفاتحة 1: ما تبقى 6235 آية على 30 يومًا
     expect(k.dailyVerses, (6235 / 30).ceil());
+    expect(k.readToday, 0);
+    // التقدّم في اليوم نفسه لا يغيّر ورد اليوم، ويزيد «قرأتَ اليوم».
+    await k.setMark(2, 10);
+    expect(k.dailyVerses, (6235 / 30).ceil());
+    expect(k.readToday, QuranData.absIndex(2, 10) - 1);
     await k.setMark(114, 6);
     expect(k.progress, 1.0);
     expect(k.dailyVerses, 0);

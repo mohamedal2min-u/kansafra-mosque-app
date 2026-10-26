@@ -3,8 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'adhan_extra.g.dart';
-
 /// مؤذن مضمّن في التطبيق. لإضافة مؤذن: ضع الملفين adhan_<raw>_long.mp3 و adhan_<raw>_short.mp3
 /// في assets/adhan/ وفي android/app/src/main/res/raw/ ثم أضف سطرًا هنا.
 class AdhanVoice {
@@ -33,12 +31,8 @@ const _baseVoices = <AdhanVoice>[
       'Seyfula Islam - CC BY 3.0 (Wikimedia Commons)'),
 ];
 
-/// المؤذنون المضافون آليًا من Internet Archive (ملف lib/adhan_extra.g.dart يولّده tools/fetch_adhan.py).
-final adhanVoices = <AdhanVoice>[
-  ..._baseVoices,
-  for (final d in extraAdhanData)
-    AdhanVoice(d[0], d[1], d[2], d[3], hasLong: false, inAuto: d[4] == '1'),
-];
+/// المؤذنون المضمّنون في التطبيق (المزيد يُحمَّل من الكتالوج الأونلاين عند الطلب).
+const adhanVoices = _baseVoices;
 
 /// مؤذن حمّله المستخدم من الكتالوج الأونلاين وسُجّل في النظام ([uri] من نوع content://).
 class CustomAdhan {
@@ -116,8 +110,9 @@ class AppSettings {
       final c = CustomAdhan.fromJson(p.getString(_kCustom));
       if (c != null) return AdhanChoice(null, long, custom: c);
     }
-    if (id == 'auto' || id == 'custom')
+    if (id == 'auto' || id == 'custom') {
       return AdhanChoice(null, long, auto: true);
+    }
     return AdhanChoice(adhanVoices.where((v) => v.id == id).firstOrNull, long);
   }
 
@@ -130,8 +125,9 @@ class AppSettings {
             : c.auto
                 ? 'auto'
                 : c.voice?.id ?? 'default');
-    if (c.custom != null)
+    if (c.custom != null) {
       await p.setString(_kCustom, jsonEncode(c.custom!.toJson()));
+    }
     await p.setBool(_kLong, c.long);
   }
 
