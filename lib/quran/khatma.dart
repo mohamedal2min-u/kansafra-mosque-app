@@ -47,6 +47,8 @@ class Khatma {
     remind = p.getBool(_kRemind) ?? true;
     time = TimeOfDay(
         hour: p.getInt(_kHour) ?? 20, minute: p.getInt(_kMinute) ?? 0);
+    // نص السور مطلوب لعرض اسم السورة في العلامة وفي التذكير؛ نحمّله فقط إن وُجدت علامة.
+    if (mark.value != null) await QuranData.load();
     _loaded = true;
   }
 

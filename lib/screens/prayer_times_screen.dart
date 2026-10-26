@@ -1,3 +1,7 @@
+import '../quran/khatma.dart';
+import '../quran/quran_data.dart';
+import '../quran/reader_screen.dart';
+import '../quran/reading_stats.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -139,6 +143,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
         ),
         const SizedBox(height: 12),
         _NextPrayerCard(label: _labels[_nextKey]!, countdown: _countdown),
+        const _ResumeReadingCard(),
         const SizedBox(height: 6),
         for (final k in _order)
           Card(
@@ -259,4 +264,93 @@ class _StarPatternPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// متابعة القراءة: تظهر في الرئيسية إن وضع المستخدم علامة في المصحف، وتفتح من آخر آية وصل إليها.
+class _ResumeReadingCard extends StatefulWidget {
+  const _ResumeReadingCard();
+
+  @override
+  State<_ResumeReadingCard> createState() => _ResumeReadingCardState();
+}
+
+class _ResumeReadingCardState extends State<_ResumeReadingCard> {
+  @override
+  void initState() {
+    super.initState();
+    Future.wait([Khatma.instance.load(), ReadingStats.instance.load()])
+        .then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  Future<void> _open(Bookmark m) async {
+    await QuranData.load(); // النص مضمّن، ويُحمَّل مرة واحدة
+    if (!mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => SurahReaderScreen(surah: m.surah, initialVerse: m.verse),
+    ));
+    if (mounted) setState(() {}); // تحديث وقت اليوم بعد العودة
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return ValueListenableBuilder<Bookmark?>(
+      valueListenable: Khatma.instance.mark,
+      builder: (context, m, _) {
+        if (m == null) return const SizedBox.shrink();
+        final today = ReadingStats.instance.today;
+        return Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Material(
+            color: cs.primaryContainer,
+            borderRadius: BorderRadius.circular(20),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () => _open(m),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: cs.tertiary,
+                    child:
+                        const Icon(Icons.bookmark_rounded, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('تابع قراءتك',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: cs.onPrimaryContainer)),
+                          const SizedBox(height: 2),
+                          Text(m.label,
+                              style: TextStyle(color: cs.onPrimaryContainer)),
+                          if (today >= 60)
+                            Text('قرأتَ اليوم ${ReadingStats.format(today)}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                        color: cs.onPrimaryContainer
+                                            .withValues(alpha: 0.8))),
+                        ]),
+                  ),
+                  Icon(Icons.arrow_back_ios_new_rounded,
+                      size: 18, color: cs.onPrimaryContainer),
+                ]),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

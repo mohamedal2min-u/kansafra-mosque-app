@@ -247,7 +247,7 @@ class _HomeShellState extends State<HomeShell> {
         notchMargin: 8,
         padding: EdgeInsets.zero,
         height: 64,
-        // الترتيب من اليسار إلى اليمين: الأذان أولًا ثم القرآن ثم التبرعات ثم الدعم ثم الإعدادات.
+        // الترتيب من اليسار إلى اليمين: الأذان ثم القرآن ثم التبرعات ثم الإعدادات ثم التواصل (الأخير).
         child: Directionality(
           textDirection: TextDirection.ltr,
           child: Row(children: [
@@ -270,8 +270,8 @@ class _HomeShellState extends State<HomeShell> {
                 ),
               ),
             ),
-            _item(3, Icons.support_agent_rounded, 'الدعم'),
             _item(4, Icons.settings_rounded, 'الإعدادات'),
+            _item(3, Icons.support_agent_rounded, 'التواصل'),
           ]),
         ),
       ),
