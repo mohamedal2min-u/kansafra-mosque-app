@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 /// كل نداءات أندرويد الأصلية (قناة واحدة kansafra/launcher).
@@ -8,13 +9,40 @@ class Launcher {
   /// الروابط الخارجية تعمل على الهاتف فقط.
   static bool get supported => !kIsWeb;
 
-  /// يفتح الرابط (تطبيق فيسبوك إن كان مثبّتًا، وإلا المتصفح).
-  static Future<bool> openUrl(String url) async {
+  /// يفتح الرابط في أول تطبيق مثبّت من [packages] مباشرة، وإلا المتصفح.
+  static Future<bool> openUrl(String url,
+      {List<String> packages = const []}) async {
     try {
-      return await _channel.invokeMethod<bool>('openUrl', {'url': url}) ??
+      return await _channel.invokeMethod<bool>(
+              'openUrl', {'url': url, 'packages': packages}) ??
           false;
     } catch (_) {
       return false;
+    }
+  }
+
+  static bool _opening = false;
+
+  /// يفتح الرابط مع إشارة فورية للمستخدم (تطبيق فيسبوك/ماسنجر قد يحتاج ثوانيَ ليفتح)،
+  /// ويتجاهل الضغطات المتكررة أثناء الفتح.
+  static Future<void> openWithFeedback(BuildContext context, String url,
+      {List<String> packages = const [], String label = 'الرابط'}) async {
+    if (_opening) return;
+    _opening = true;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(SnackBar(
+        content: Text('جارٍ فتح $label…'),
+        duration: const Duration(seconds: 2)));
+    try {
+      final ok = await openUrl(url, packages: packages);
+      if (!ok) {
+        messenger.hideCurrentSnackBar();
+        messenger
+            .showSnackBar(const SnackBar(content: Text('تعذّر فتح الرابط.')));
+      }
+    } finally {
+      // نمنع التكرار لحظات حتى يظهر التطبيق الآخر.
+      Future.delayed(const Duration(seconds: 2), () => _opening = false);
     }
   }
 

@@ -248,13 +248,9 @@ class _SettingsScreenState extends State<SettingsScreen>
               const Icon(Icons.facebook, color: Color(0xFF1877F2), size: 30),
           title: const Text('صفحتنا على فيسبوك'),
           trailing: const Icon(Icons.open_in_new_rounded),
-          onTap: () async {
-            final ok = await Launcher.openUrl(MosqueConfig.facebookUrl);
-            if (!ok && context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('تعذّر فتح الرابط.')));
-            }
-          },
+          onTap: () => Launcher.openWithFeedback(
+              context, MosqueConfig.facebookUrl,
+              packages: MosqueConfig.facebookPackages, label: 'صفحة فيسبوك'),
         ),
       ListTile(
         leading: const Icon(Icons.health_and_safety_rounded),
@@ -269,7 +265,9 @@ class _SettingsScreenState extends State<SettingsScreen>
           leading: const Icon(Icons.privacy_tip_rounded),
           title: const Text('سياسة الخصوصية'),
           trailing: const Icon(Icons.open_in_new_rounded),
-          onTap: () => Launcher.openUrl(MosqueConfig.privacyUrl),
+          onTap: () => Launcher.openWithFeedback(
+              context, MosqueConfig.privacyUrl,
+              label: 'سياسة الخصوصية'),
         ),
       ExpansionTile(
         title: const Text('مصادر تسجيلات الأذان'),

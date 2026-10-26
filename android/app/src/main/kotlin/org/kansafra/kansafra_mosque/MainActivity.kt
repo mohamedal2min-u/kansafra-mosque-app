@@ -53,13 +53,23 @@ class MainActivity : AudioServiceActivity() {
                     keepAwake(call.argument<Boolean>("on") == true, call.argument<Boolean>("wifi") == true)
                     result.success(null)
                 } else if (call.method == "openUrl") {
+                    // نجرّب التطبيق المناسب مباشرة (ماسنجر/فيسبوك) لتجنّب المرور بالمتصفح ثم التحويل، وهو بطيء.
                     val url = call.argument<String>("url") ?: ""
-                    try {
-                        startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                        result.success(true)
-                    } catch (e: Exception) {
-                        result.success(false)
+                    val packages = call.argument<List<String>>("packages") ?: emptyList()
+                    val uri = android.net.Uri.parse(url)
+                    var opened = false
+                    for (pkg in packages + listOf("")) {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            if (pkg.isNotEmpty()) intent.setPackage(pkg)
+                            startActivity(intent)
+                            opened = true
+                            break
+                        } catch (e: Exception) {
+                            // التطبيق غير مثبّت أو لا يفتح هذا الرابط: نجرّب التالي.
+                        }
                     }
+                    result.success(opened)
                 } else if (call.method == "registerSound") {
                     // يسجّل ملف أذان محمَّل في MediaStore ليستطيع النظام تشغيله كصوت إشعار (content://).
                     val path = call.argument<String>("path") ?: ""

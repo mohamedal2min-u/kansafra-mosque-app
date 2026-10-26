@@ -2,6 +2,13 @@
 class MosqueConfig {
   static const privacyUrl = 'https://kansafra.alamin.se/privacy.html';
   static const messengerUrl = 'https://m.me/kansafra.mosque';
+  // تطبيقات تُفتح بها الروابط مباشرة بالترتيب (ثم المتصفح إن لم يوجد أي منها).
+  static const messengerPackages = [
+    'com.facebook.orca',
+    'com.facebook.mlite',
+    'com.facebook.katana'
+  ];
+  static const facebookPackages = ['com.facebook.katana', 'com.facebook.lite'];
   static const facebookUrl = 'https://www.facebook.com/kansafra.mosque/';
 
   /// كتالوج الأذان الأونلاين (catalog.json والمقاطع) المنشور من مجلد docs/adhan في المستودع.

@@ -7,14 +7,6 @@ import '../launcher.dart';
 class SupportScreen extends StatelessWidget {
   const SupportScreen({super.key});
 
-  Future<void> _open(BuildContext context, String url) async {
-    final ok = await Launcher.openUrl(url);
-    if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('تعذّر فتح الرابط.')));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -56,7 +48,10 @@ class SupportScreen extends StatelessWidget {
                         foregroundColor: Colors.white),
                     icon: const Icon(Icons.send_rounded),
                     label: const Text('فتح المحادثة في ماسنجر'),
-                    onPressed: () => _open(context, MosqueConfig.messengerUrl),
+                    onPressed: () => Launcher.openWithFeedback(
+                        context, MosqueConfig.messengerUrl,
+                        packages: MosqueConfig.messengerPackages,
+                        label: 'ماسنجر'),
                   ),
                 ),
             ]),
@@ -71,7 +66,10 @@ class SupportScreen extends StatelessWidget {
               title: const Text('تابعنا على فيسبوك'),
               subtitle: const Text('أخبار المسجد ومواعيده'),
               trailing: const Icon(Icons.open_in_new_rounded),
-              onTap: () => _open(context, MosqueConfig.facebookUrl),
+              onTap: () => Launcher.openWithFeedback(
+                  context, MosqueConfig.facebookUrl,
+                  packages: MosqueConfig.facebookPackages,
+                  label: 'صفحة فيسبوك'),
             ),
           ),
         const SizedBox(height: 8),
