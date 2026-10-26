@@ -18,6 +18,7 @@ import 'screens/donations_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/support_screen.dart';
 import 'screens/prayer_times_screen.dart';
+import 'widgets/background_help.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -159,6 +160,25 @@ class _HomeShellState extends State<HomeShell> {
     SettingsScreen()
   ];
   static const _donate = 2;
+
+  @override
+  void initState() {
+    super.initState();
+    QuranPlayer.instance.backgroundWarning.addListener(_onBackgroundWarning);
+  }
+
+  @override
+  void dispose() {
+    QuranPlayer.instance.backgroundWarning.removeListener(_onBackgroundWarning);
+    super.dispose();
+  }
+
+  void _onBackgroundWarning() {
+    if (QuranPlayer.instance.backgroundWarning.value && mounted) {
+      QuranPlayer.instance.backgroundWarning.value = false;
+      showBackgroundHelp(context);
+    }
+  }
 
   Widget _item(int i, IconData icon, String label) {
     final selected = _index == i;

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../launcher.dart';
 import 'audio_store.dart';
@@ -109,6 +110,22 @@ class QuranPlayer extends ChangeNotifier {
     }
   }
 
+  /// يصير true مرة واحدة إن بدأ التشغيل والهاتف يقيّد التطبيق في الخلفية (فيتوقف الصوت مع
+  /// إطفاء الشاشة)، لتعرض الواجهة شرح السماح بالعمل في الخلفية.
+  final backgroundWarning = ValueNotifier<bool>(false);
+  bool _bgChecked = false;
+
+  Future<void> _checkBackground() async {
+    if (_bgChecked || kIsWeb) return;
+    _bgChecked = true;
+    final p = await SharedPreferences.getInstance();
+    if (p.getBool('bg_warned') ?? false) return;
+    if (await Launcher.backgroundAllowed() == false) {
+      await p.setBool('bg_warned', true);
+      backgroundWarning.value = true;
+    }
+  }
+
   Reciter? reciter;
   Moshaf? moshaf;
   int? surah;
@@ -208,6 +225,7 @@ class QuranPlayer extends ChangeNotifier {
       );
       _ready = true;
       unawaited(_audio.play()); // play() لا يعود إلا عند الإيقاف أو الانتهاء
+      unawaited(_checkBackground());
     } catch (e) {
       error = 'تعذّر التشغيل. تحقّق من الإنترنت.';
     }
@@ -226,6 +244,7 @@ class QuranPlayer extends ChangeNotifier {
           tag: MediaItem(
               id: 'radio_${r.id}', title: r.name, album: 'بث مباشر')));
       unawaited(_audio.play());
+      unawaited(_checkBackground());
     } catch (_) {
       error = 'تعذّر تشغيل البث. تحقّق من الإنترنت.';
     }

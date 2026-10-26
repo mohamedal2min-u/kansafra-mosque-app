@@ -70,6 +70,23 @@ class Launcher {
     }
   }
 
+  /// هل يُسمح للتطبيق بالعمل في الخلفية بلا قيود البطارية؟ null = غير معروف (الويب أو خطأ).
+  static Future<bool?> backgroundAllowed() async {
+    if (kIsWeb) return null;
+    try {
+      return await _channel.invokeMethod<bool>('backgroundAllowed');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// يفتح صفحة التطبيق في إعدادات الهاتف (ومنها: البطارية ← غير مقيّد).
+  static Future<void> openAppDetails() async {
+    try {
+      await _channel.invokeMethod('openAppDetails');
+    } catch (_) {}
+  }
+
   /// يسجّل ملف أذان في MediaStore ويعيد content:// ليستعمله النظام صوت إشعار.
   static Future<String?> registerSound(String path, String title) => _channel
       .invokeMethod<String>('registerSound', {'path': path, 'title': title});

@@ -12,6 +12,7 @@ import '../services/adhan_service.dart';
 import '../services/diag_log.dart';
 import '../flavor.dart';
 import '../services/home_place.dart';
+import '../widgets/background_help.dart';
 import '../services/prayer_calc.dart';
 import '../settings.dart';
 
@@ -29,6 +30,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
   String _lastOk = '—';
   String _sound = '—';
   String _next = '—';
+  bool? _background;
   List<String> _log = const [];
   bool _busy = false;
 
@@ -55,6 +57,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
     final (nk, nt) = site.next() ?? PrayerCalc.next();
     final next =
         '${PrayerCalc.names[nk]} ${DateFormat.jm('ar').format(site.wall(nt))} (توقيت ${site.name})';
+    final background = await Launcher.backgroundAllowed();
     final log = await DiagLog.list();
     if (!mounted) return;
     setState(() {
@@ -65,6 +68,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
           : DateFormat.yMMMd('ar').add_jm().format(DateTime.parse(ok));
       _sound = sound.label;
       _next = next;
+      _background = background;
       _log = log;
     });
   }
@@ -155,6 +159,19 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
             ok: _pending == null ? null : _pending! > 0),
         _row(Icons.access_time_rounded, 'أقرب صلاة', _next),
         _row(Icons.music_note_rounded, 'الصوت المختار', _sound),
+        if (_background != null)
+          _row(
+              Icons.battery_saver_rounded,
+              'القرآن والبث والشاشة مطفأة',
+              _background!
+                  ? 'مسموح: يستمر الصوت في الخلفية'
+                  : 'مقيّد بتوفير البطارية: قد يتوقف الصوت بعد إطفاء الشاشة',
+              ok: _background,
+              action: _background!
+                  ? null
+                  : TextButton(
+                      onPressed: () => showBackgroundHelp(context),
+                      child: const Text('إصلاح'))),
         const Divider(),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

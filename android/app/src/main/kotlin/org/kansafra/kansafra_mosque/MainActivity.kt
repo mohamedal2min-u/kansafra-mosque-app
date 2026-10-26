@@ -115,6 +115,22 @@ class MainActivity : AudioServiceActivity() {
                         val g = geocodeName(lat, lng)
                         runOnUiThread { result.success(mapOf("name" to g.first, "cc" to g.second)) }
                     }.start()
+                } else if (call.method == "backgroundAllowed") {
+                    // توفير البطارية (أو «تقييد الخلفية») يوقف تشغيل القرآن بعد إطفاء الشاشة على بعض الهواتف.
+                    val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+                    val am = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+                    val ignoring = pm.isIgnoringBatteryOptimizations(packageName)
+                    val restricted = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && am.isBackgroundRestricted
+                    result.success(ignoring && !restricted)
+                } else if (call.method == "openAppDetails") {
+                    // صفحة التطبيق في إعدادات الهاتف: البطارية ← غير مقيّد.
+                    try {
+                        startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.parse("package:$packageName")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
                 } else if (call.method == "timeZoneId") {
                     result.success(java.util.TimeZone.getDefault().id)
                 } else {
