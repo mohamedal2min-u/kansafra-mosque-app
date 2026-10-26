@@ -154,4 +154,12 @@ class ReadingStats {
     if (h == 0) return '$m دقيقة';
     return m == 0 ? '$h ساعة' : '$h ساعة و$m دقيقة';
   }
+
+  /// صيغة مختصرة للبطاقات الضيقة: «2 س 5 د».
+  static String formatShort(int secs) {
+    if (secs < 60) return secs == 0 ? '٠ د' : '< 1 د';
+    final h = secs ~/ 3600;
+    final m = (secs % 3600) ~/ 60;
+    return h == 0 ? '$m د' : (m == 0 ? '$h س' : '$h س $m د');
+  }
 }

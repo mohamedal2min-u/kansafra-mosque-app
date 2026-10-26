@@ -76,9 +76,9 @@ class Identity extends ChangeNotifier {
   }
 
   /// معاملات تُرسل إلى الجدول: device دائمًا، و idToken إن كان المستخدم مسجّلًا بحساب Google.
-  Future<Map<String, String>> params() async {
+  Future<Map<String, String>> params({bool withToken = true}) async {
     final m = {'device': await deviceId()};
-    if (googleEnabled && _user != null) {
+    if (withToken && googleEnabled && _user != null) {
       try {
         final auth = await (_user!.authentication);
         if (auth.idToken != null) m['idToken'] = auth.idToken!;

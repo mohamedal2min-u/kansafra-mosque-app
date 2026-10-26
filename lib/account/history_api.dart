@@ -33,14 +33,32 @@ class HistoryException implements Exception {
 class History {
   final List<MyDonation> donations;
   final List<MyMessage> messages;
-  History(this.donations, this.messages);
+
+  /// true: تعذّر التحقق من حساب Google عند الخادم، فعُرض سجل هذا الهاتف فقط.
+  final bool deviceOnly;
+  History(this.donations, this.messages, {this.deviceOnly = false});
 }
 
 /// يقرأ سجل المستخدم من الجدول (تبرعاته ومحادثات الدعم وردود المسجد).
+/// إن فشل الخادم مع رمز حساب Google (غالبًا لأن إذن التحقق لم يُمنح للسكربت بعد)،
+/// نعيد المحاولة بمعرّف الهاتف فقط ونعرض سجل الهاتف بدل خطأ.
 Future<History> fetchHistory() async {
+  final signedIn = Identity.instance.user != null;
+  try {
+    return await _fetch(withToken: true);
+  } on HistoryException catch (e) {
+    if (signedIn && (e.reason == 'server' || e.reason == 'auth')) {
+      final h = await _fetch(withToken: false);
+      return History(h.donations, h.messages, deviceOnly: true);
+    }
+    rethrow;
+  }
+}
+
+Future<History> _fetch({required bool withToken}) async {
   final uri = Uri.parse(MosqueConfig.donorsUrl).replace(queryParameters: {
     'action': 'mine',
-    ...await Identity.instance.params(),
+    ...await Identity.instance.params(withToken: withToken),
   });
   final res = await http.get(uri).timeout(const Duration(seconds: 20));
   if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
