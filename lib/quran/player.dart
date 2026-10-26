@@ -6,6 +6,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../launcher.dart';
+import '../services/diag_log.dart';
 import 'audio_store.dart';
 import 'quran_data.dart';
 import 'radios.dart';
@@ -61,6 +62,16 @@ class QuranPlayer extends ChangeNotifier {
       if (s.processingState == ProcessingState.completed && previewId != null) {
         previewId = null; // انتهت معاينة الأذان
       }
+      // توقّف لم يطلبه المستخدم: نسجّله في «التشخيص» لنعرف سببه على هذا الهاتف.
+      if (_wasPlaying &&
+          !s.playing &&
+          !_userPaused &&
+          previewId == null &&
+          (surah != null || radio != null)) {
+        DiagLog.add('توقف التشغيل دون طلب (${s.processingState.name})');
+      }
+      _wasPlaying = s.playing;
+      if (s.playing) _userPaused = false;
       _syncWake();
       _syncListenTimer();
       notifyListeners();
@@ -87,13 +98,43 @@ class QuranPlayer extends ChangeNotifier {
         error = null; // عاد التشغيل بعد انقطاع
         notifyListeners();
       }
-    }, onError: (Object e, StackTrace st) {
-      if (previewId == null && (surah != null || radio != null)) {
-        error = 'تعذّر التشغيل. تحقّق من الإنترنت.';
-        notifyListeners();
+    }, onError: (Object e, StackTrace st) => _recover(e));
+    return a;
+  }
+
+  bool _wasPlaying = false;
+  bool _userPaused = false;
+  int _retries = 0;
+  DateTime _retryWindow = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// انقطاع الشبكة والشاشة مطفأة (نوم الواي فاي أو التحوّل لبيانات الهاتف) يوقف المشغّل بخطأ.
+  /// نعيد الاتصال تلقائيًا من الموضع نفسه: حتى 8 محاولات كل 10 دقائق، بمهلة متزايدة.
+  void _recover(Object e) {
+    if (previewId != null || (surah == null && radio == null)) return;
+    DiagLog.add('خطأ في التشغيل: ${'$e'.split('\n').first}');
+    final now = DateTime.now();
+    if (now.difference(_retryWindow) > const Duration(minutes: 10)) {
+      _retryWindow = now;
+      _retries = 0;
+    }
+    if (_retries >= 8) {
+      error = 'تعذّر التشغيل. تحقّق من الإنترنت.';
+      notifyListeners();
+      return;
+    }
+    _retries++;
+    final r = radio, m = moshaf, idx = _a?.currentIndex, pos = _a?.position;
+    Future.delayed(Duration(seconds: 2 * _retries), () async {
+      // أوقفه المستخدم أو بدأ شيئًا آخر أثناء الانتظار.
+      if (_userPaused || radio != r || moshaf != m || _a == null) return;
+      try {
+        await _audio.load();
+        if (r == null && idx != null) await _audio.seek(pos, index: idx);
+        unawaited(_audio.play());
+      } catch (e2) {
+        _recover(e2);
       }
     });
-    return a;
   }
 
   /// نقيس مدة الاستماع لكل قارئ بمؤقّت يعمل أثناء التشغيل فقط.
@@ -252,6 +293,7 @@ class QuranPlayer extends ChangeNotifier {
   }
 
   Future<void> stop() async {
+    _userPaused = true;
     await _a?.stop();
     previewId = null;
     radio = null;
@@ -268,6 +310,7 @@ class QuranPlayer extends ChangeNotifier {
   Future<void> toggle() async {
     if (_a == null) return;
     if (_audio.playing) {
+      _userPaused = true;
       await _audio.pause();
     } else {
       unawaited(_audio.play());
