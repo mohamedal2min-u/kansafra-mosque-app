@@ -15,6 +15,7 @@ class MiniPlayer extends StatelessWidget {
     return ListenableBuilder(
       listenable: p,
       builder: (context, _) {
+        if (p.radio != null) return _RadioBar(p);
         if (p.surah == null) return const SizedBox.shrink();
         return Container(
           margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
@@ -101,6 +102,67 @@ class MiniPlayer extends StatelessWidget {
           ]),
         );
       },
+    );
+  }
+}
+
+/// شريط الإذاعة المباشرة: إيقاف، تشغيل/إيقاف مؤقت، واسم الإذاعة مع شارة «مباشر».
+class _RadioBar extends StatelessWidget {
+  final QuranPlayer p;
+  const _RadioBar(this.p);
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+          color: scheme.primary, borderRadius: BorderRadius.circular(16)),
+      child: Row(children: [
+        IconButton(
+          tooltip: 'إيقاف',
+          icon: Icon(Icons.stop_circle_rounded,
+              color: scheme.onPrimary, size: 40),
+          onPressed: p.stop,
+        ),
+        IconButton(
+          tooltip: p.playing ? 'إيقاف مؤقت' : 'تشغيل',
+          icon: Icon(
+              p.playing
+                  ? Icons.pause_circle_rounded
+                  : Icons.play_circle_rounded,
+              color: scheme.onPrimary,
+              size: 54),
+          onPressed: p.toggle,
+        ),
+        Expanded(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(p.radio!.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: scheme.onPrimary, fontWeight: FontWeight.w700)),
+            Text(p.error ?? 'بث مباشر',
+                style: TextStyle(
+                    color: scheme.onPrimary.withValues(alpha: 0.85),
+                    fontSize: 12)),
+          ]),
+        ),
+        Container(
+          margin: const EdgeInsets.only(left: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+              color: const Color(0xFFD32F2F),
+              borderRadius: BorderRadius.circular(8)),
+          child: const Text('مباشر',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700)),
+        ),
+      ]),
     );
   }
 }

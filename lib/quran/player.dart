@@ -7,6 +7,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 import '../launcher.dart';
 import 'audio_store.dart';
 import 'quran_data.dart';
+import 'radios.dart';
 import 'reciters.dart';
 
 /// مشغّل واحد للتطبيق. السور تُشغَّل كقائمة واحدة داخل المشغّل الأصلي، فينتقل للتالية دون
@@ -37,7 +38,7 @@ class QuranPlayer extends ChangeNotifier {
     });
     _audio.playbackEventStream.listen((_) {},
         onError: (Object e, StackTrace st) {
-      if (previewId == null && surah != null) {
+      if (previewId == null && (surah != null || radio != null)) {
         error = 'تعذّر التشغيل. تحقّق من الإنترنت.';
         notifyListeners();
       }
@@ -67,6 +68,7 @@ class QuranPlayer extends ChangeNotifier {
   int? surah;
   String? error;
   String? previewId; // معاينة أذان جارية (تستعمل المشغّل نفسه)
+  RadioStation? radio; // إذاعة مباشرة جارية
   List<bool> _local = const []; // هل كل سورة في القائمة محفوظة على الهاتف
   bool _ready =
       false; // القائمة الجديدة حُمّلت (نتجاهل أحداث القائمة القديمة قبل ذلك)
@@ -83,12 +85,16 @@ class QuranPlayer extends ChangeNotifier {
   void _syncWake() {
     if (kIsWeb) return;
     final i = _audio.currentIndex;
-    final streaming = i != null && i < _local.length && !_local[i];
+    final streaming =
+        radio != null || (i != null && i < _local.length && !_local[i]);
     // playing تبقى true بعد انتهاء القائمة، فنشترط أن المشغّل لم ينتهِ ولم يتوقف.
     final ps = _audio.processingState;
     final active =
         ps != ProcessingState.completed && ps != ProcessingState.idle;
-    final on = _audio.playing && active && previewId == null && surah != null;
+    final on = _audio.playing &&
+        active &&
+        previewId == null &&
+        (surah != null || radio != null);
     final wifi = on && streaming;
     if (on == _wake && wifi == _wifi) return;
     Launcher.keepAwake(on, wifi).then((ok) {
@@ -118,6 +124,7 @@ class QuranPlayer extends ChangeNotifier {
 
   Future<void> play(Reciter r, Moshaf m, int s) async {
     previewId = null;
+    radio = null;
     _ready = false;
     reciter = r;
     moshaf = m;
@@ -160,9 +167,26 @@ class QuranPlayer extends ChangeNotifier {
   }
 
   /// إيقاف نهائي وإخفاء شريط التشغيل.
+  /// تشغيل إذاعة مباشرة (بث مستمر، بلا سور ولا تقديم أو تأخير).
+  Future<void> playRadio(RadioStation r) async {
+    await stop();
+    radio = r;
+    notifyListeners();
+    try {
+      await _audio.setAudioSource(AudioSource.uri(Uri.parse(r.url),
+          tag: MediaItem(
+              id: 'radio_${r.id}', title: r.name, album: 'بث مباشر')));
+      unawaited(_audio.play());
+    } catch (_) {
+      error = 'تعذّر تشغيل البث. تحقّق من الإنترنت.';
+    }
+    notifyListeners();
+  }
+
   Future<void> stop() async {
     await _audio.stop();
     previewId = null;
+    radio = null;
     surah = null;
     moshaf = null;
     reciter = null;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'listen_screen.dart';
+import 'radio_screen.dart';
 import 'quran_data.dart';
 import 'reader_screen.dart';
 
@@ -22,11 +23,16 @@ class QuranHome extends StatelessWidget {
 
   Widget _tabs() {
     return const DefaultTabController(
-      length: 2,
+      length: 3,
       child: Column(children: [
-        TabBar(tabs: [Tab(text: 'استماع'), Tab(text: 'قراءة (بدون إنترنت)')]),
+        TabBar(tabs: [
+          Tab(text: 'استماع'),
+          Tab(text: 'قراءة'),
+          Tab(text: 'بث مباشر')
+        ]),
         Expanded(
-            child: TabBarView(children: [ListenScreen(), SurahListScreen()])),
+            child: TabBarView(
+                children: [ListenScreen(), SurahListScreen(), RadioScreen()])),
       ]),
     );
   }
