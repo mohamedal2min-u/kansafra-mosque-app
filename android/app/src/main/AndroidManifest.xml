@@ -1,7 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
-    <!-- موقع تقريبي فقط، عند طلب المستخدم: لمواقيت مكان سكنه إن كان خارج كنصفرة. -->
+    <!-- الموقع عند فتح التطبيق فقط (لا في الخلفية): لمواقيت مكان السكن واقتراحها عند السفر.
+         GPS لأن إنترنت إدلب يمرّ عبر تركيا فلا يدل على المكان. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>

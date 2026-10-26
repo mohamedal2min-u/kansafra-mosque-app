@@ -77,12 +77,6 @@ class AdhanService {
       // سُجّل الخطأ في DiagLog؛ لا نوقف بقية التهيئة.
     }
     await Khatma.instance.scheduleReminders();
-    // مسافر انتقل لمدينة أخرى: نحدّث مكان السكن بهدوء ونعيد جدولة الأذان.
-    if (await HomePlace.refreshQuietly()) {
-      try {
-        await scheduleAll(force: true);
-      } catch (_) {}
-    }
   }
 
   /// تفاصيل الإشعار: لكل صوت قناة مستقلة لأن صوت القناة لا يتغير بعد إنشائها.

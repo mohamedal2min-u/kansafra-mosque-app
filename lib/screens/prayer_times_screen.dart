@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 import '../services/adhan_service.dart';
 import '../services/home_place.dart';
 import '../services/prayer_calc.dart';
+import '../services/travel_watch.dart';
 import '../widgets/hero_banner.dart';
 
 class PrayerTimesScreen extends StatefulWidget {
@@ -42,7 +43,6 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
   Map<String, DateTime>? _homeToday; // مكان السكن (إن حُدّد)
   late String _nextKey;
   late DateTime _nextTime;
-  bool _showHint = false;
 
   @override
   void initState() {
@@ -53,17 +53,12 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
     _compute(DateTime.now());
     _tick();
     _start();
-    if (HomePlace.site.value == null && HomePlace.looksAbroad) {
-      HomePlace.hintDismissed().then((d) {
-        if (mounted && !d) setState(() => _showHint = true);
-      });
-    }
   }
 
   void _placeChanged() {
     _compute(DateTime.now());
     _tick();
-    if (mounted) setState(() => _showHint = false);
+    if (mounted) setState(() {});
   }
 
   void _start() {
@@ -77,6 +72,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
     if (state == AppLifecycleState.resumed) {
       _tick();
       _start();
+      TravelWatch.check(); // مرة كل 3 ساعات على الأكثر
     } else {
       _timer?.cancel();
     }
@@ -123,10 +119,18 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
         '${two(left.inHours)}:${two(left.inMinutes % 60)}:${two(left.inSeconds % 60)}';
   }
 
+  Future<void> _confirmHere() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final err = await TravelWatch.confirmHere();
+    messenger.showSnackBar(SnackBar(
+        content: Text(err ?? 'حُفظت شبكة كنصفرة. سننبّهك إن ابتعدت عنها.')));
+  }
+
   Future<void> _locate() async {
     final messenger = ScaffoldMessenger.of(context);
     messenger.showSnackBar(const SnackBar(
-        content: Text('جارٍ تحديد موقعك…'), duration: Duration(seconds: 3)));
+        content: Text('جارٍ تحديد موقعك… (قد يستغرق نصف دقيقة)'),
+        duration: Duration(seconds: 45)));
     final err = await HomePlace.locate();
     messenger.hideCurrentSnackBar();
     if (err != null) {
@@ -180,13 +184,45 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
             label: _labels[_nextKey]!,
             place: home == null ? null : 'بتوقيت ${home.name}',
             countdown: _countdown),
-        if (_showHint)
-          _AbroadHint(
-              onLocate: _locate,
-              onDismiss: () {
-                HomePlace.dismissHint();
-                setState(() => _showHint = false);
-              }),
+        ValueListenableBuilder<bool>(
+          valueListenable: TravelWatch.askHere,
+          builder: (_, ask, __) => !ask
+              ? const SizedBox.shrink()
+              : _InfoCard(
+                  icon: Icons.home_work_rounded,
+                  title: 'هل أنت الآن في كنصفرة؟',
+                  text:
+                      'نحفظ شبكة الإنترنت التي تستعملها هنا (ولو واي فاي تركيًا). فإن ابتعدت عن كنصفرة يومًا (حلب مثلًا) أو سافرت، نقترح عليك الأذان على توقيت مكانك. يمكنك تغيير ذلك من الإعدادات.',
+                  action: 'نعم، أنا في كنصفرة',
+                  actionIcon: Icons.check_rounded,
+                  onAction: _confirmHere,
+                  secondary: 'لا، أنا خارجها',
+                  onSecondary: () {
+                    TravelWatch.answeredAway();
+                    _locate();
+                  },
+                  dismiss: 'ليس الآن',
+                  onDismiss: TravelWatch.answeredAway),
+        ),
+        ValueListenableBuilder<TravelHint?>(
+          valueListenable: TravelWatch.hint,
+          builder: (_, h, __) => h == null
+              ? const SizedBox.shrink()
+              : _InfoCard(
+                  icon: Icons.public_rounded,
+                  title: h.name.isEmpty
+                      ? 'يبدو أنك خارج كنصفرة'
+                      : 'أنت في ${h.name}؟',
+                  text:
+                      'اجعل الأذان على توقيت ${h.name.isEmpty ? 'مكانك' : h.name}، وتبقى مواقيت كنصفرة ظاهرة بجانبه.',
+                  action: 'نعم، على توقيت مكاني',
+                  actionIcon: Icons.my_location_rounded,
+                  onAction: _locate,
+                  secondary: h.byNetwork ? 'أنا في كنصفرة' : null,
+                  onSecondary: _confirmHere,
+                  dismiss: 'لا، شكرًا',
+                  onDismiss: TravelWatch.dismiss),
+        ),
         const _ResumeReadingCard(),
         const SizedBox(height: 6),
         if (homeTimes != null)
@@ -331,11 +367,29 @@ class _StarPatternPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// اقتراح لمن هاتفه على غير توقيت سوريا: أذان على توقيت مكان سكنه، ومواقيت كنصفرة بجانبه.
-class _AbroadHint extends StatelessWidget {
-  final VoidCallback onLocate;
+/// بطاقة اقتراح في الرئيسية: عنوان ونص وزر تنفيذ، وزر ثانٍ اختياري، وزر إخفاء.
+class _InfoCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String text;
+  final String action;
+  final IconData actionIcon;
+  final VoidCallback onAction;
+  final String? secondary;
+  final VoidCallback? onSecondary;
+  final String dismiss;
   final VoidCallback onDismiss;
-  const _AbroadHint({required this.onLocate, required this.onDismiss});
+  const _InfoCard(
+      {required this.icon,
+      required this.title,
+      required this.text,
+      required this.action,
+      required this.actionIcon,
+      required this.onAction,
+      this.secondary,
+      this.onSecondary,
+      required this.dismiss,
+      required this.onDismiss});
 
   @override
   Widget build(BuildContext context) {
@@ -350,27 +404,37 @@ class _AbroadHint extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Icon(Icons.public_rounded, color: cs.tertiary),
+            Icon(icon, color: cs.tertiary),
             const SizedBox(width: 8),
-            Text('تسكن خارج سوريا؟',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w700)),
+            Expanded(
+              child: Text(title,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+            ),
           ]),
           const SizedBox(height: 6),
-          const Text(
-              'اجعل الأذان على توقيت مكان سكنك (أم القرى)، وتبقى مواقيت كنصفرة ظاهرة بجانبه.'),
-          Row(children: [
-            FilledButton.icon(
-              style: FilledButton.styleFrom(minimumSize: const Size(0, 42)),
-              onPressed: onLocate,
-              icon: const Icon(Icons.my_location_rounded, size: 18),
-              label: const Text('تحديد موقعي'),
-            ),
-            const SizedBox(width: 8),
-            TextButton(onPressed: onDismiss, child: const Text('لا، شكرًا')),
-          ]),
+          Text(text),
+          const SizedBox(height: 6),
+          Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 42)),
+                  onPressed: onAction,
+                  icon: Icon(actionIcon, size: 18),
+                  label: Text(action),
+                ),
+                if (secondary != null)
+                  OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 42)),
+                      onPressed: onSecondary,
+                      child: Text(secondary!)),
+                TextButton(onPressed: onDismiss, child: Text(dismiss)),
+              ]),
         ]),
       ),
     );

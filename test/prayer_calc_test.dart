@@ -1,3 +1,4 @@
+import 'package:adhan/adhan.dart' show CalculationMethod;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hijri/hijri_calendar.dart';
 import 'package:kansafra_mosque/services/prayer_calc.dart';
@@ -40,7 +41,8 @@ void main() {
   });
 
   group('مكان السكن (أم القرى)', () {
-    final stockholm = PrayerSite.home('ستوكهولم', 59.3293, 18.0686);
+    final stockholm = PrayerSite.home('ستوكهولم', 59.3293, 18.0686,
+        method: CalculationMethod.umm_al_qura);
 
     test('الظهر في ستوكهولم قرب منتصف النهار، والعشاء بعد المغرب بساعة ونصف',
         () {
@@ -68,7 +70,8 @@ void main() {
     });
 
     test('أقصى الشمال صيفًا (الشمس لا تغيب) لا يُعطّل التطبيق', () {
-      const kiruna = PrayerSite('كيرونا', 67.85, 20.22, ummAlQura: true);
+      const kiruna = PrayerSite('كيرونا', 67.85, 20.22,
+          method: CalculationMethod.umm_al_qura);
       expect(() => kiruna.day(DateTime(2026, 6, 21)), returnsNormally);
       expect(() => kiruna.next(), returnsNormally);
     });
@@ -80,6 +83,34 @@ void main() {
 
     test('مفتاح الجدولة يختلف بين المسجد ومكان السكن', () {
       expect(stockholm.key, isNot(PrayerSite.mosque.key));
+    });
+
+    test(
+        'الطريقة الافتراضية: رابطة العالم الإسلامي في أوروبا وأم القرى في السعودية',
+        () {
+      expect(PrayerSite.defaultMethod('SE'),
+          CalculationMethod.muslim_world_league);
+      expect(PrayerSite.defaultMethod(null),
+          CalculationMethod.muslim_world_league);
+      expect(PrayerSite.defaultMethod('SA'), CalculationMethod.umm_al_qura);
+      expect(PrayerSite.defaultMethod('TR'), CalculationMethod.turkey);
+    });
+
+    test('تعديل الدقائق يُطبَّق ويُحفظ ويُستعاد', () {
+      final base = PrayerSite.home('ستوكهولم', 59.3293, 18.0686, country: 'SE');
+      final adj = base.copyWith(adjustments: {'isha': -10, 'fajr': 5});
+      final a = base.day(DateTime(2026, 10, 26))!;
+      final b = adj.day(DateTime(2026, 10, 26))!;
+      expect(b['isha']!.difference(a['isha']!).inMinutes, -10);
+      expect(b['fajr']!.difference(a['fajr']!).inMinutes, 5);
+      final back = PrayerSite.fromJson(adj.toJson())!;
+      expect(back.key, adj.key);
+      expect(back.country, 'SE');
+    });
+
+    test('المسافة: حلب أبعد من 20 كم عن كنصفرة', () {
+      expect(PrayerSite.mosque.kmTo(36.2021, 37.1343), greaterThan(70));
+      expect(PrayerSite.mosque.kmTo(35.66, 36.49), lessThan(2));
     });
   });
 }

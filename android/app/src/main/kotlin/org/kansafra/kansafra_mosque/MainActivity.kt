@@ -93,18 +93,29 @@ class MainActivity : AudioServiceActivity() {
                         }
                     }.start()
                 } else if (call.method == "getLocation") {
-                    getLocation(call.argument<Boolean>("lastOnly") == true, result)
+                    val maxAge = (call.argument<Number>("maxAgeMs") ?: 6 * 3600_000L).toLong()
+                    getLocation(maxAge, call.argument<Boolean>("geocode") != false, result)
+                } else if (call.method == "geocode") {
+                    val lat = call.argument<Double>("lat") ?: 0.0
+                    val lng = call.argument<Double>("lng") ?: 0.0
+                    Thread {
+                        val g = geocodeName(lat, lng)
+                        runOnUiThread { result.success(mapOf("name" to g.first, "cc" to g.second)) }
+                    }.start()
+                } else if (call.method == "timeZoneId") {
+                    result.success(java.util.TimeZone.getDefault().id)
                 } else {
                     result.notImplemented()
                 }
             }
     }
 
-    /// موقع تقريبي لمواقيت مكان السكن: آخر موقع يعرفه الهاتف إن كان حديثًا، وإلا قراءة واحدة
-    /// من الشبكة (بلا تتبّع مستمر). [lastOnly]: بلا أي قراءة جديدة (تحديث صامت عند الفتح).
+    /// موقع الهاتف لمواقيت مكان السكن وكشف السفر: GPS أولًا (إنترنت إدلب يمرّ عبر تركيا، فلا يُعتمد
+    /// على الشبكة)، ثم موقع الشبكة إن لم يلتقط GPS إشارة. قراءة واحدة فقط، بلا تتبّع مستمر.
+    /// [maxAgeMs]: يُقبل آخر موقع يعرفه الهاتف إن كان أحدث منها.
     @SuppressLint("MissingPermission")
     @Suppress("DEPRECATION")
-    private fun getLocation(lastOnly: Boolean, result: MethodChannel.Result) {
+    private fun getLocation(maxAgeMs: Long, geocode: Boolean, result: MethodChannel.Result) {
         val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         val replied = AtomicBoolean(false)
         fun reply(loc: Location?) {
@@ -113,53 +124,79 @@ class MainActivity : AudioServiceActivity() {
                 runOnUiThread { result.error("no_location", "no location", null) }
                 return
             }
-            // اسم المدينة بالعربية (يحتاج إنترنت)، في خيط جانبي.
+            if (!geocode) {
+                runOnUiThread { result.success(mapOf("lat" to loc.latitude, "lng" to loc.longitude)) }
+                return
+            }
             Thread {
-                var name: String? = null
-                try {
-                    val a = Geocoder(this, Locale("ar")).getFromLocation(loc.latitude, loc.longitude, 1)?.firstOrNull()
-                    name = a?.locality ?: a?.subAdminArea ?: a?.adminArea ?: a?.countryName
-                } catch (e: Exception) {
-                    // بلا اسم: يظهر «مكان سكني».
-                }
-                runOnUiThread { result.success(mapOf("lat" to loc.latitude, "lng" to loc.longitude, "name" to name)) }
+                val g = geocodeName(loc.latitude, loc.longitude)
+                runOnUiThread { result.success(mapOf("lat" to loc.latitude, "lng" to loc.longitude, "name" to g.first, "cc" to g.second)) }
             }.start()
         }
         try {
-            val last = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER, LocationManager.PASSIVE_PROVIDER)
-                .mapNotNull { p -> try { lm.getLastKnownLocation(p) } catch (e: Exception) { null } }
-                .maxByOrNull { it.time }
-            if (lastOnly || (last != null && System.currentTimeMillis() - last.time < 6 * 3600_000L)) {
-                reply(last)
+            fun last(p: String): Location? = try { lm.getLastKnownLocation(p) } catch (e: Exception) { null }
+            val now = System.currentTimeMillis()
+            val gpsLast = last(LocationManager.GPS_PROVIDER)
+            val netLast = last(LocationManager.NETWORK_PROVIDER) ?: last(LocationManager.PASSIVE_PROVIDER)
+            if (gpsLast != null && now - gpsLast.time < maxAgeMs) {
+                reply(gpsLast)
                 return
             }
-            val provider = when {
-                lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
-                lm.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
-                else -> null
-            }
-            if (provider == null) {
-                if (last != null) reply(last) else result.error("location_off", "location services off", null)
+            val gpsOn = lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
+            val netOn = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+            if (!gpsOn && !netOn) {
+                val any = listOfNotNull(gpsLast, netLast).maxByOrNull { it.time }
+                if (any != null) reply(any) else result.error("location_off", "location services off", null)
                 return
             }
             val handler = Handler(Looper.getMainLooper())
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                val cancel = CancellationSignal()
-                handler.postDelayed({ cancel.cancel(); reply(last) }, 20_000)
-                lm.getCurrentLocation(provider, cancel, mainExecutor) { reply(it ?: last) }
-            } else {
-                val listener = object : LocationListener {
-                    override fun onLocationChanged(loc: Location) { reply(loc) }
-                    override fun onProviderDisabled(p: String) {}
-                    override fun onProviderEnabled(p: String) {}
-                    override fun onStatusChanged(p: String?, s: Int, b: android.os.Bundle?) {}
+            // قراءة واحدة من مزوّد، مع مهلة؛ ثم [next] إن لم تأتِ.
+            fun single(provider: String, timeoutMs: Long, next: () -> Unit) {
+                val done = AtomicBoolean(false)
+                fun got(loc: Location?) {
+                    if (!done.compareAndSet(false, true)) return
+                    if (loc != null) reply(loc) else next()
                 }
-                handler.postDelayed({ lm.removeUpdates(listener); reply(last) }, 20_000)
-                lm.requestSingleUpdate(provider, listener, Looper.getMainLooper())
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        val cancel = CancellationSignal()
+                        handler.postDelayed({ cancel.cancel(); got(null) }, timeoutMs)
+                        lm.getCurrentLocation(provider, cancel, mainExecutor) { got(it) }
+                    } else {
+                        val listener = object : LocationListener {
+                            override fun onLocationChanged(loc: Location) { got(loc) }
+                            override fun onProviderDisabled(p: String) {}
+                            override fun onProviderEnabled(p: String) {}
+                            override fun onStatusChanged(p: String?, s: Int, b: android.os.Bundle?) {}
+                        }
+                        handler.postDelayed({ lm.removeUpdates(listener); got(null) }, timeoutMs)
+                        lm.requestSingleUpdate(provider, listener, Looper.getMainLooper())
+                    }
+                } catch (e: Exception) {
+                    // مثلًا: سمح المستخدم بالموقع التقريبي فقط فرفض النظام GPS؛ نجرّب التالي.
+                    got(null)
+                }
             }
+            val fallback = {
+                if (netOn) {
+                    single(LocationManager.NETWORK_PROVIDER, 15_000) { reply(gpsLast ?: netLast) }
+                } else {
+                    reply(gpsLast ?: netLast)
+                }
+            }
+            if (gpsOn) single(LocationManager.GPS_PROVIDER, 25_000, fallback) else fallback()
         } catch (e: Exception) {
             if (replied.compareAndSet(false, true)) result.error("location_failed", e.message, null)
         }
+    }
+
+    /// اسم المدينة بالعربية ورمز البلد (يحتاج إنترنت). يُستدعى من خيط جانبي.
+    @Suppress("DEPRECATION")
+    private fun geocodeName(lat: Double, lng: Double): Pair<String?, String?> = try {
+        val a = Geocoder(this, Locale("ar")).getFromLocation(lat, lng, 1)?.firstOrNull()
+        Pair(a?.locality ?: a?.subAdminArea ?: a?.adminArea ?: a?.countryName, a?.countryCode)
+    } catch (e: Exception) {
+        Pair(null, null)
     }
 
     companion object {

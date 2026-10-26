@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:adhan/adhan.dart';
 import 'package:hijri/hijri_calendar.dart';
 
@@ -12,29 +14,112 @@ class PrayerSite {
   final double latitude;
   final double longitude;
 
+  /// رمز البلد (SE، SA…) إن عُرف: يحدّد طريقة الحساب الافتراضية.
+  final String? country;
+
   /// فرق توقيت المكان عن UTC للعرض. null = توقيت الهاتف (مكان السكن).
   final Duration? offset;
+  final CalculationMethod method;
 
-  /// أم القرى لمكان السكن، ورابطة العالم الإسلامي مع تعديلات المسجد لكنصفرة.
-  final bool ummAlQura;
+  /// تعديل دقائق لكل صلاة (لمطابقة جدول مسجد المستخدم المحلي).
   final Map<String, int> adjustments;
 
   const PrayerSite(this.name, this.latitude, this.longitude,
-      {this.offset, this.ummAlQura = false, this.adjustments = const {}});
+      {this.country,
+      this.offset,
+      this.method = CalculationMethod.muslim_world_league,
+      this.adjustments = const {}});
 
   /// المسجد: سوريا على UTC+3 طوال العام منذ 2022.
   static const mosque = PrayerSite(
       'كنصفرة', MosqueConfig.latitude, MosqueConfig.longitude,
-      offset: Duration(hours: 3), adjustments: MosqueConfig.minuteAdjustments);
+      country: 'SY',
+      offset: Duration(hours: 3),
+      adjustments: MosqueConfig.minuteAdjustments);
 
-  /// مكان السكن: أم القرى، وتوقيت الهاتف للعرض.
-  factory PrayerSite.home(String name, double lat, double lng) =>
-      PrayerSite(name, lat, lng, ummAlQura: true);
+  /// مكان السكن: توقيت الهاتف للعرض، وطريقة الحساب المعتادة في بلده.
+  factory PrayerSite.home(String name, double lat, double lng,
+          {String? country,
+          CalculationMethod? method,
+          Map<String, int> adjustments = const {}}) =>
+      PrayerSite(name, lat, lng,
+          country: country,
+          method: method ?? defaultMethod(country),
+          adjustments: adjustments);
 
-  /// مفتاح يتغيّر بتغيّر المكان أو الطريقة (لبصمة جدولة الأذان).
+  /// طرق الحساب المعروضة للاختيار.
+  static const methods = {
+    CalculationMethod.muslim_world_league: 'رابطة العالم الإسلامي',
+    CalculationMethod.umm_al_qura: 'أم القرى (السعودية)',
+    CalculationMethod.turkey: 'ديانت (تركيا)',
+    CalculationMethod.egyptian: 'الهيئة المصرية',
+    CalculationMethod.moon_sighting_committee:
+        'لجنة رؤية الهلال (بريطانيا والشمال)',
+    CalculationMethod.dubai: 'الإمارات',
+    CalculationMethod.kuwait: 'الكويت',
+    CalculationMethod.qatar: 'قطر',
+  };
+
+  /// الطريقة المعتادة في البلد: أم القرى في السعودية، ورابطة العالم الإسلامي في أوروبا وغيرها.
+  static CalculationMethod defaultMethod(String? country) => switch (country) {
+        'SA' || 'BH' || 'OM' || 'YE' => CalculationMethod.umm_al_qura,
+        'AE' => CalculationMethod.dubai,
+        'KW' => CalculationMethod.kuwait,
+        'QA' => CalculationMethod.qatar,
+        'TR' => CalculationMethod.turkey,
+        'EG' => CalculationMethod.egyptian,
+        _ => CalculationMethod.muslim_world_league,
+      };
+
+  String get methodName => methods[method] ?? method.name;
+
+  PrayerSite copyWith(
+          {CalculationMethod? method, Map<String, int>? adjustments}) =>
+      PrayerSite(name, latitude, longitude,
+          country: country,
+          offset: offset,
+          method: method ?? this.method,
+          adjustments: adjustments ?? this.adjustments);
+
+  Map<String, dynamic> toJson() => {
+        'lat': latitude,
+        'lng': longitude,
+        'name': name,
+        'cc': country,
+        'm': method.name,
+        'adj': adjustments,
+      };
+
+  static PrayerSite? fromJson(Map<String, dynamic> j) {
+    final lat = (j['lat'] as num?)?.toDouble();
+    final lng = (j['lng'] as num?)?.toDouble();
+    if (lat == null || lng == null) return null;
+    final m =
+        CalculationMethod.values.where((e) => e.name == j['m']).firstOrNull;
+    return PrayerSite.home(j['name'] as String? ?? 'مكان سكني', lat, lng,
+        country: j['cc'] as String?,
+        method: m,
+        adjustments: {
+          for (final e in ((j['adj'] as Map?) ?? const {}).entries)
+            '${e.key}': (e.value as num).toInt(),
+        });
+  }
+
+  /// مفتاح يتغيّر بتغيّر المكان أو الطريقة أو التعديلات (لبصمة جدولة الأذان).
   String get key =>
       '${latitude.toStringAsFixed(3)},${longitude.toStringAsFixed(3)}|'
-      '${ummAlQura ? 'uq' : 'mwl'}|$adjustments';
+      '${method.name}|$adjustments';
+
+  /// المسافة بالكيلومتر إلى نقطة أخرى.
+  double kmTo(double lat, double lng) {
+    double rad(double d) => d * math.pi / 180;
+    final da = rad(lat - latitude), dl = rad(lng - longitude);
+    final h = math.pow(math.sin(da / 2), 2) +
+        math.cos(rad(latitude)) *
+            math.cos(rad(lat)) *
+            math.pow(math.sin(dl / 2), 2);
+    return 2 * 6371 * math.asin(math.sqrt(h));
+  }
 
   /// يحوّل لحظة حقيقية إلى ساعة حائط بتوقيت المكان (للعرض فقط، لا للمقارنة).
   DateTime wall(DateTime instant) =>
@@ -44,10 +129,7 @@ class PrayerSite {
   DateTime now() => wall(DateTime.now());
 
   CalculationParameters get _params {
-    final p = (ummAlQura
-        ? CalculationMethod.umm_al_qura.getParameters()
-        : CalculationMethod.muslim_world_league.getParameters())
-      ..madhab = Madhab.shafi;
+    final p = method.getParameters()..madhab = Madhab.shafi;
     // في الشمال (السويد): لا يغيب الشفق صيفًا، فالفجر لا يُبكَّر عن آخر سُبع من الليل.
     if (latitude.abs() > 48) {
       p.highLatitudeRule = HighLatitudeRule.seventh_of_the_night;
@@ -72,7 +154,7 @@ class PrayerSite {
       };
       final extra = Map.of(adjustments);
       // أم القرى: العشاء بعد المغرب بساعتين في رمضان بدل ساعة ونصف.
-      if (ummAlQura &&
+      if (method == CalculationMethod.umm_al_qura &&
           HijriCalendar.fromDate(DateTime(day.year, day.month, day.day))
                   .hMonth ==
               9) {

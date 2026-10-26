@@ -1,3 +1,7 @@
+import 'dart:ui' as ui;
+
+import 'package:adhan/adhan.dart' show CalculationMethod;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -10,6 +14,7 @@ import '../config.dart';
 import '../launcher.dart';
 import '../services/adhan_service.dart';
 import '../services/home_place.dart';
+import '../services/travel_watch.dart';
 import '../services/prayer_calc.dart';
 import '../settings.dart';
 
@@ -82,6 +87,102 @@ class _SettingsScreenState extends State<SettingsScreen>
     await AdhanService.instance.scheduleAll(force: true);
     messenger.showSnackBar(SnackBar(
         content: Text('صار الأذان على توقيت ${HomePlace.site.value!.name}')));
+  }
+
+  static String _adjSummary(Map<String, int> adj) {
+    final parts = [
+      for (final e in PrayerCalc.names.entries)
+        if ((adj[e.key] ?? 0) != 0)
+          '${e.value}: ${adj[e.key]! > 0 ? 'تأخير' : 'تقديم'} ${adj[e.key]!.abs()} د',
+    ];
+    return parts.isEmpty ? 'بلا تعديل' : parts.join('، ');
+  }
+
+  Future<void> _saveHome(PrayerSite s) async {
+    await HomePlace.set(s);
+    await AdhanService.instance.scheduleAll(force: true);
+  }
+
+  Future<void> _pickMethod(PrayerSite home) async {
+    final m = await showDialog<CalculationMethod>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('طريقة الحساب'),
+        children: [
+          RadioGroup<CalculationMethod>(
+            groupValue: home.method,
+            onChanged: (v) => Navigator.pop(ctx, v),
+            child: Column(children: [
+              for (final e in PrayerSite.methods.entries)
+                RadioListTile<CalculationMethod>(
+                    title: Text(e.value), value: e.key),
+            ]),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 8, 24, 0),
+            child: Text(
+                'الأدق: اختر طريقة مسجدك المحلي، ثم طابق الدقائق مع جدوله.',
+                style: TextStyle(fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+    if (m != null && m != home.method) {
+      await _saveHome(home.copyWith(method: m));
+    }
+  }
+
+  Future<void> _editAdjustments(PrayerSite home) async {
+    final adj = Map<String, int>.of(home.adjustments);
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                  'قدّم أو أخّر كل صلاة بالدقائق لتطابق جدول مسجدك المحلي.'),
+            ),
+            for (final e in PrayerCalc.names.entries)
+              ListTile(
+                title: Text(e.value),
+                trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline),
+                    onPressed: (adj[e.key] ?? 0) <= -60
+                        ? null
+                        : () =>
+                            setSheet(() => adj[e.key] = (adj[e.key] ?? 0) - 1),
+                  ),
+                  SizedBox(
+                    width: 44,
+                    child: Text(
+                        '${(adj[e.key] ?? 0) > 0 ? '+' : ''}${adj[e.key] ?? 0}',
+                        textAlign: TextAlign.center,
+                        textDirection: ui.TextDirection.ltr, // «-5» لا «5-»
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 16)),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline),
+                    onPressed: (adj[e.key] ?? 0) >= 60
+                        ? null
+                        : () =>
+                            setSheet(() => adj[e.key] = (adj[e.key] ?? 0) + 1),
+                  ),
+                ]),
+              ),
+            const SizedBox(height: 8),
+          ]),
+        ),
+      ),
+    );
+    adj.removeWhere((_, v) => v == 0);
+    if (adj.toString() != home.adjustments.toString()) {
+      await _saveHome(home.copyWith(adjustments: adj));
+    }
   }
 
   Future<void> _useMosqueTime() async {
@@ -187,8 +288,8 @@ class _SettingsScreenState extends State<SettingsScreen>
             RadioListTile<bool>(
               title: const Text('توقيت مكان سكني'),
               subtitle: Text(home == null
-                  ? 'لمن يسكن خارج كنصفرة: يُحدَّد موقعك التقريبي مرة واحدة (أم القرى)'
-                  : '${home.name} (أم القرى)، وتبقى مواقيت كنصفرة ظاهرة في الرئيسية'),
+                  ? 'لمن يسكن خارج كنصفرة: يُحدَّد موقعك مرة واحدة'
+                  : '${home.name}، وتبقى مواقيت كنصفرة ظاهرة في الرئيسية'),
               value: true,
               secondary: _locating
                   ? const SizedBox(
@@ -203,9 +304,28 @@ class _SettingsScreenState extends State<SettingsScreen>
                           onPressed: _locate,
                         ),
             ),
+            if (home != null) ...[
+              ListTile(
+                contentPadding:
+                    const EdgeInsetsDirectional.only(start: 72, end: 16),
+                title: const Text('طريقة الحساب'),
+                subtitle: Text(home.methodName),
+                trailing: const Icon(Icons.chevron_left),
+                onTap: () => _pickMethod(home),
+              ),
+              ListTile(
+                contentPadding:
+                    const EdgeInsetsDirectional.only(start: 72, end: 16),
+                title: const Text('مطابقة مسجدك (تعديل بالدقائق)'),
+                subtitle: Text(_adjSummary(home.adjustments)),
+                trailing: const Icon(Icons.chevron_left),
+                onTap: () => _editAdjustments(home),
+              ),
+            ],
           ]),
         ),
       ),
+      if (!kIsWeb) const _TravelSection(),
       const Padding(
         padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
         child: Text('المظهر'),
@@ -391,5 +511,83 @@ class _SavedAudioTileState extends State<_SavedAudioTile> {
         );
       },
     );
+  }
+}
+
+/// تنبيه السفر: تشغيل/إيقاف، وشبكات كنصفرة المحفوظة.
+class _TravelSection extends StatefulWidget {
+  const _TravelSection();
+
+  @override
+  State<_TravelSection> createState() => _TravelSectionState();
+}
+
+class _TravelSectionState extends State<_TravelSection> {
+  bool _on = true;
+  List<String> _nets = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final on = await TravelWatch.enabled();
+    final nets = await TravelWatch.networks();
+    if (mounted) {
+      setState(() {
+        _on = on;
+        _nets = nets;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      SwitchListTile(
+        secondary: const Icon(Icons.travel_explore_rounded),
+        title: const Text('تنبيه عند السفر'),
+        subtitle: const Text(
+            'إن ابتعدت عن كنصفرة يومًا (حلب مثلًا) أو يومين خارج سوريا، نقترح الأذان على توقيت مكانك'),
+        value: _on,
+        onChanged: (v) async {
+          setState(() => _on = v);
+          await TravelWatch.setEnabled(v);
+        },
+      ),
+      if (_on)
+        ListTile(
+          contentPadding: const EdgeInsetsDirectional.only(start: 72, end: 8),
+          title: const Text('شبكات كنصفرة'),
+          subtitle: Text(_nets.isEmpty
+              ? 'لم تُحفظ شبكة بعد'
+              : 'محفوظة: ${_nets.join('، ')}'),
+          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+            IconButton(
+              icon: const Icon(Icons.add_location_alt_rounded),
+              tooltip: 'أنا في كنصفرة الآن: احفظ هذه الشبكة',
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final err = await TravelWatch.confirmHere();
+                messenger.showSnackBar(SnackBar(
+                    content:
+                        Text(err ?? 'حُفظت الشبكة الحالية كشبكة كنصفرة.')));
+                _load();
+              },
+            ),
+            if (_nets.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded),
+                tooltip: 'مسح الشبكات المحفوظة',
+                onPressed: () async {
+                  await TravelWatch.clearNetworks();
+                  _load();
+                },
+              ),
+          ]),
+        ),
+    ]);
   }
 }
