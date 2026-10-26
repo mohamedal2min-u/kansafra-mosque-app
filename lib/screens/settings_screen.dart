@@ -9,6 +9,8 @@ import '../quran/player.dart';
 import '../config.dart';
 import '../launcher.dart';
 import '../services/adhan_service.dart';
+import '../services/home_place.dart';
+import '../services/prayer_calc.dart';
 import '../settings.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -62,6 +64,28 @@ class _SettingsScreenState extends State<SettingsScreen>
   Future<void> _pick(AdhanChoice c) async {
     setState(() => _choice = c);
     await AppSettings.setAdhanChoice(c);
+    await AdhanService.instance.scheduleAll(force: true);
+  }
+
+  bool _locating = false;
+
+  /// يحدّد مكان السكن ويجعل الأذان على توقيته.
+  Future<void> _locate() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _locating = true);
+    final err = await HomePlace.locate();
+    if (mounted) setState(() => _locating = false);
+    if (err != null) {
+      messenger.showSnackBar(SnackBar(content: Text(err)));
+      return;
+    }
+    await AdhanService.instance.scheduleAll(force: true);
+    messenger.showSnackBar(SnackBar(
+        content: Text('صار الأذان على توقيت ${HomePlace.site.value!.name}')));
+  }
+
+  Future<void> _useMosqueTime() async {
+    await HomePlace.clear();
     await AdhanService.instance.scheduleAll(force: true);
   }
 
@@ -141,6 +165,46 @@ class _SettingsScreenState extends State<SettingsScreen>
           await AppSettings.setAdhanEnabled(v);
           await AdhanService.instance.scheduleAll(force: true);
         },
+      ),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: Text('توقيت الأذان'),
+      ),
+      ValueListenableBuilder<PrayerSite?>(
+        valueListenable: HomePlace.site,
+        builder: (_, home, __) => RadioGroup<bool>(
+          groupValue: home != null,
+          onChanged: (v) {
+            if (v == true && home == null) _locate();
+            if (v == false && home != null) _useMosqueTime();
+          },
+          child: Column(children: [
+            const RadioListTile<bool>(
+              title: Text('توقيت كنصفرة'),
+              subtitle: Text('مواقيت المسجد'),
+              value: false,
+            ),
+            RadioListTile<bool>(
+              title: const Text('توقيت مكان سكني'),
+              subtitle: Text(home == null
+                  ? 'لمن يسكن خارج كنصفرة: يُحدَّد موقعك التقريبي مرة واحدة (أم القرى)'
+                  : '${home.name} (أم القرى)، وتبقى مواقيت كنصفرة ظاهرة في الرئيسية'),
+              value: true,
+              secondary: _locating
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2.5))
+                  : home == null
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.my_location_rounded),
+                          tooltip: 'تحديث الموقع',
+                          onPressed: _locate,
+                        ),
+            ),
+          ]),
+        ),
       ),
       const Padding(
         padding: EdgeInsets.fromLTRB(16, 8, 16, 4),

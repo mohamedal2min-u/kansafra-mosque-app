@@ -8,6 +8,7 @@ import 'config.dart';
 import 'settings.dart';
 import 'services/adhan_service.dart';
 import 'services/diag_log.dart';
+import 'services/home_place.dart';
 import 'quran/mini_player.dart';
 import 'quran/player.dart';
 import 'quran/quran_home.dart';
@@ -39,6 +40,7 @@ Future<void> main() async {
   // خدمة تشغيل القرآن في الخلفية: تبدأ تهيئتها الآن دون أن تؤخر فتح التطبيق، والمشغّل نفسه لا يُنشأ إلا عند أول استماع.
   QuranPlayer.initBackground();
   await ThemeController.load();
+  await HomePlace.load(); // قبل جدولة الأذان وقبل عرض المواقيت
   Identity.instance.restore();
   runApp(const MosqueApp());
 }

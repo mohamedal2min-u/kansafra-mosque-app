@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hijri/hijri_calendar.dart';
 import 'package:kansafra_mosque/services/prayer_calc.dart';
 
 void main() {
@@ -36,5 +37,49 @@ void main() {
         PrayerCalc.next(t['dhuhr']!.subtract(const Duration(minutes: 1)));
     expect(k, 'dhuhr');
     expect(at, t['dhuhr']);
+  });
+
+  group('مكان السكن (أم القرى)', () {
+    final stockholm = PrayerSite.home('ستوكهولم', 59.3293, 18.0686);
+
+    test('الظهر في ستوكهولم قرب منتصف النهار، والعشاء بعد المغرب بساعة ونصف',
+        () {
+      final t = stockholm.day(DateTime(2026, 10, 26))!;
+      // 26 أكتوبر: ستوكهولم على UTC+1، والظهر نحو 11:5x محليًا = 10:5x غرينتش.
+      expect(t['dhuhr']!.toUtc().hour, 10);
+      expect(t['isha']!.difference(t['maghrib']!).inMinutes, 90);
+      final order = [for (final k in PrayerCalc.keys) t[k]!];
+      for (var i = 1; i < order.length; i++) {
+        expect(order[i].isAfter(order[i - 1]), isTrue);
+      }
+    });
+
+    test('صيف الشمال: للفجر وقت قبل الشروق رغم أن الشفق لا يغيب', () {
+      final t = stockholm.day(DateTime(2026, 6, 21))!;
+      expect(t['fajr']!.isBefore(t['sunrise']!), isTrue);
+      expect(t['sunrise']!.difference(t['fajr']!).inMinutes, greaterThan(20));
+    });
+
+    test('رمضان: العشاء بعد المغرب بساعتين', () {
+      final d = DateTime(2027, 2, 20);
+      expect(HijriCalendar.fromDate(d).hMonth, 9);
+      final t = stockholm.day(d)!;
+      expect(t['isha']!.difference(t['maghrib']!).inMinutes, 120);
+    });
+
+    test('أقصى الشمال صيفًا (الشمس لا تغيب) لا يُعطّل التطبيق', () {
+      const kiruna = PrayerSite('كيرونا', 67.85, 20.22, ummAlQura: true);
+      expect(() => kiruna.day(DateTime(2026, 6, 21)), returnsNormally);
+      expect(() => kiruna.next(), returnsNormally);
+    });
+
+    test('اليوم التالي بالتقويم لا يقفز يومًا عند تغيير الساعة', () {
+      final d = PrayerSite.nextDay(DateTime(2026, 3, 28, 23, 30));
+      expect([d.year, d.month, d.day], [2026, 3, 29]);
+    });
+
+    test('مفتاح الجدولة يختلف بين المسجد ومكان السكن', () {
+      expect(stockholm.key, isNot(PrayerSite.mosque.key));
+    });
   });
 }

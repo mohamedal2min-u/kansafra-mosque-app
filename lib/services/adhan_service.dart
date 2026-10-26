@@ -9,6 +9,7 @@ import '../config.dart';
 import '../settings.dart';
 import '../quran/khatma.dart';
 import 'diag_log.dart';
+import 'home_place.dart';
 import 'prayer_calc.dart';
 
 /// جدولة تنبيه الأذان لخمس صلوات على مدى 10 أيام، وتُعاد الجدولة عند فتح التطبيق في يوم جديد.
@@ -76,6 +77,12 @@ class AdhanService {
       // سُجّل الخطأ في DiagLog؛ لا نوقف بقية التهيئة.
     }
     await Khatma.instance.scheduleReminders();
+    // مسافر انتقل لمدينة أخرى: نحدّث مكان السكن بهدوء ونعيد جدولة الأذان.
+    if (await HomePlace.refreshQuietly()) {
+      try {
+        await scheduleAll(force: true);
+      } catch (_) {}
+    }
   }
 
   /// تفاصيل الإشعار: لكل صوت قناة مستقلة لأن صوت القناة لا يتغير بعد إنشائها.
@@ -132,8 +139,8 @@ class AdhanService {
   Future<void> scheduleTest({int seconds = 10}) async {
     final sound = await AppSettings.adhanChoice();
     final at = tz.TZDateTime.now(tz.local).add(Duration(seconds: seconds));
-    final raw = sound.rawNameFor('fajr',
-        PrayerCalc.wall(DateTime.now()).millisecondsSinceEpoch ~/ 86400000);
+    final raw = sound.rawNameFor(
+        'fajr', HomePlace.active.now().millisecondsSinceEpoch ~/ 86400000);
     await _zoned(9999, 'تجربة الأذان', 'هكذا سيُسمع التنبيه في وقت الصلاة', at,
         _details(sound, raw));
   }
@@ -143,16 +150,17 @@ class AdhanService {
       (await _plugin.pendingNotificationRequests()).length;
 
   /// يجدول 10 أيام من التنبيهات. لا يعيد الجدولة (50 منبّهًا) عند كل فتح للتطبيق،
-  /// بل عند تغيّر اليوم أو الإعدادات أو [force]: توفير للبطارية والمعالج.
+  /// بل عند تغيّر اليوم أو الإعدادات أو المكان أو [force]: توفير للبطارية والمعالج.
   /// لا نحفظ «بصمة» الجدولة إلا بعد نجاحها، فإن فشلت تُعاد المحاولة في الفتح التالي.
+  /// المكان: مكان سكن المستخدم إن حدّده (مغترب)، وإلا مسجد كنصفرة.
   Future<void> scheduleAll({bool force = false}) async {
     final enabled = await AppSettings.adhanEnabled();
     final sound = await AppSettings.adhanChoice();
-    final now0 = PrayerCalc.mosqueNow();
+    final site = HomePlace.active;
+    final now0 = site.now();
     // v2: بعد إصلاح فرق التوقيت، فتُعاد جدولة التنبيهات القديمة الخاطئة عند أول فتح.
     final signature =
-        'v2|${now0.year}-${now0.month}-${now0.day}|$enabled|${sound.id}|'
-        '${MosqueConfig.latitude},${MosqueConfig.longitude}|${MosqueConfig.minuteAdjustments}';
+        'v2|${now0.year}-${now0.month}-${now0.day}|$enabled|${sound.id}|${site.key}';
     final prefs = await SharedPreferences.getInstance();
     if (!force && prefs.getString('sched_sig') == signature) return;
 
@@ -164,19 +172,21 @@ class AdhanService {
       await prefs.remove('sched_sig');
       if (enabled) {
         final now = DateTime.now();
-        final today = PrayerCalc.mosqueNow();
+        final body = identical(site, PrayerSite.mosque)
+            ? MosqueConfig.name
+            : 'حسب توقيت ${site.name}';
         var id = 0;
         for (var d = 0; d < _days; d++) {
-          final times = PrayerCalc.day(today.add(Duration(days: d)));
+          final times = site.day(PrayerSite.nextDay(now0, d));
           for (final k in PrayerCalc.names.keys) {
             id++;
-            final instant = times[k]!;
-            if (!instant.isAfter(now)) continue;
+            final instant = times?[k];
+            if (instant == null || !instant.isAfter(now)) continue;
             final at = tz.TZDateTime.from(instant, tz.local);
             final raw = sound.rawNameFor(
-                k, PrayerCalc.wall(instant).millisecondsSinceEpoch ~/ 86400000);
-            await _zoned(id, 'حان الآن موعد أذان ${PrayerCalc.names[k]}',
-                MosqueConfig.name, at, _details(sound, raw));
+                k, site.wall(instant).millisecondsSinceEpoch ~/ 86400000);
+            await _zoned(id, 'حان الآن موعد أذان ${PrayerCalc.names[k]}', body,
+                at, _details(sound, raw));
           }
         }
       }

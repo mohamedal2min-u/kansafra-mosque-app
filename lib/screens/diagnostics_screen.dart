@@ -10,6 +10,7 @@ import '../config.dart';
 import '../launcher.dart';
 import '../services/adhan_service.dart';
 import '../services/diag_log.dart';
+import '../services/home_place.dart';
 import '../services/prayer_calc.dart';
 import '../settings.dart';
 
@@ -49,9 +50,10 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
     final p = await SharedPreferences.getInstance();
     final ok = p.getString('sched_last_ok');
     final sound = await AppSettings.adhanChoice();
-    final (nk, nt) = PrayerCalc.next();
+    final site = HomePlace.active;
+    final (nk, nt) = site.next() ?? PrayerCalc.next();
     final next =
-        '${PrayerCalc.names[nk]} ${DateFormat.jm('ar').format(PrayerCalc.wall(nt))}';
+        '${PrayerCalc.names[nk]} ${DateFormat.jm('ar').format(site.wall(nt))} (توقيت ${site.name})';
     final log = await DiagLog.list();
     if (!mounted) return;
     setState(() {

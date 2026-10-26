@@ -1,14 +1,24 @@
 package org.kansafra.kansafra_mosque
 
+import android.annotation.SuppressLint
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Intent
 import android.content.Context
+import android.location.Geocoder
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.os.CancellationSignal
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.provider.MediaStore
 import java.io.File
+import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -82,10 +92,74 @@ class MainActivity : AudioServiceActivity() {
                             runOnUiThread { result.error("register_failed", e.message, null) }
                         }
                     }.start()
+                } else if (call.method == "getLocation") {
+                    getLocation(call.argument<Boolean>("lastOnly") == true, result)
                 } else {
                     result.notImplemented()
                 }
             }
+    }
+
+    /// موقع تقريبي لمواقيت مكان السكن: آخر موقع يعرفه الهاتف إن كان حديثًا، وإلا قراءة واحدة
+    /// من الشبكة (بلا تتبّع مستمر). [lastOnly]: بلا أي قراءة جديدة (تحديث صامت عند الفتح).
+    @SuppressLint("MissingPermission")
+    @Suppress("DEPRECATION")
+    private fun getLocation(lastOnly: Boolean, result: MethodChannel.Result) {
+        val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val replied = AtomicBoolean(false)
+        fun reply(loc: Location?) {
+            if (!replied.compareAndSet(false, true)) return
+            if (loc == null) {
+                runOnUiThread { result.error("no_location", "no location", null) }
+                return
+            }
+            // اسم المدينة بالعربية (يحتاج إنترنت)، في خيط جانبي.
+            Thread {
+                var name: String? = null
+                try {
+                    val a = Geocoder(this, Locale("ar")).getFromLocation(loc.latitude, loc.longitude, 1)?.firstOrNull()
+                    name = a?.locality ?: a?.subAdminArea ?: a?.adminArea ?: a?.countryName
+                } catch (e: Exception) {
+                    // بلا اسم: يظهر «مكان سكني».
+                }
+                runOnUiThread { result.success(mapOf("lat" to loc.latitude, "lng" to loc.longitude, "name" to name)) }
+            }.start()
+        }
+        try {
+            val last = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER, LocationManager.PASSIVE_PROVIDER)
+                .mapNotNull { p -> try { lm.getLastKnownLocation(p) } catch (e: Exception) { null } }
+                .maxByOrNull { it.time }
+            if (lastOnly || (last != null && System.currentTimeMillis() - last.time < 6 * 3600_000L)) {
+                reply(last)
+                return
+            }
+            val provider = when {
+                lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
+                lm.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
+                else -> null
+            }
+            if (provider == null) {
+                if (last != null) reply(last) else result.error("location_off", "location services off", null)
+                return
+            }
+            val handler = Handler(Looper.getMainLooper())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val cancel = CancellationSignal()
+                handler.postDelayed({ cancel.cancel(); reply(last) }, 20_000)
+                lm.getCurrentLocation(provider, cancel, mainExecutor) { reply(it ?: last) }
+            } else {
+                val listener = object : LocationListener {
+                    override fun onLocationChanged(loc: Location) { reply(loc) }
+                    override fun onProviderDisabled(p: String) {}
+                    override fun onProviderEnabled(p: String) {}
+                    override fun onStatusChanged(p: String?, s: Int, b: android.os.Bundle?) {}
+                }
+                handler.postDelayed({ lm.removeUpdates(listener); reply(last) }, 20_000)
+                lm.requestSingleUpdate(provider, listener, Looper.getMainLooper())
+            }
+        } catch (e: Exception) {
+            if (replied.compareAndSet(false, true)) result.error("location_failed", e.message, null)
+        }
     }
 
     companion object {

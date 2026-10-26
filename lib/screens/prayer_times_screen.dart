@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:hijri/hijri_calendar.dart';
 import 'package:intl/intl.dart';
 
+import '../services/adhan_service.dart';
+import '../services/home_place.dart';
 import '../services/prayer_calc.dart';
 import '../widgets/hero_banner.dart';
 
@@ -35,19 +37,33 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
   Timer? _timer;
   // العدّاد يتحدّث بدون إعادة بناء الشاشة كلها، فيبقى الاستهلاك قليلًا.
   final _countdown = ValueNotifier<String>('');
-  late DateTime _day;
-  late Map<String, DateTime> _today;
+  late String _dayKey;
+  late Map<String, DateTime> _today; // كنصفرة
+  Map<String, DateTime>? _homeToday; // مكان السكن (إن حُدّد)
   late String _nextKey;
   late DateTime _nextTime;
+  bool _showHint = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     HijriCalendar.setLocal('ar');
+    HomePlace.site.addListener(_placeChanged);
     _compute(DateTime.now());
     _tick();
     _start();
+    if (HomePlace.site.value == null && HomePlace.looksAbroad) {
+      HomePlace.hintDismissed().then((d) {
+        if (mounted && !d) setState(() => _showHint = true);
+      });
+    }
+  }
+
+  void _placeChanged() {
+    _compute(DateTime.now());
+    _tick();
+    if (mounted) setState(() => _showHint = false);
   }
 
   void _start() {
@@ -69,27 +85,33 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    HomePlace.site.removeListener(_placeChanged);
     _timer?.cancel();
     _countdown.dispose();
     super.dispose();
   }
 
-  /// يحسب مواقيت يوم المسجد مرة واحدة، ويُعاد الحساب عند تغيّر اليوم أو بعد مرور الصلاة القادمة فقط.
-  /// كل الأوقات لحظات حقيقية؛ العرض بتوقيت المسجد عبر PrayerCalc.wall.
+  static String _ymd(DateTime d) => '${d.year}-${d.month}-${d.day}';
+
+  /// يحسب مواقيت اليوم مرة واحدة، ويُعاد الحساب عند تغيّر اليوم أو بعد مرور الصلاة القادمة فقط.
+  /// كل الأوقات لحظات حقيقية؛ العرض بتوقيت كل مكان عبر wall. الصلاة القادمة والعدّاد
+  /// لمكان الأذان: مكان السكن إن حُدّد، وإلا كنصفرة.
   void _compute(DateTime now) {
-    final w = PrayerCalc.wall(now);
-    _day = DateTime(w.year, w.month, w.day);
-    _today = PrayerCalc.day(_day);
-    final (k, t) = PrayerCalc.next(now);
+    final home = HomePlace.site.value;
+    _dayKey = _key(now);
+    _today = PrayerCalc.day(PrayerCalc.wall(now));
+    _homeToday = home?.day(home.now());
+    final (k, t) = HomePlace.active.next(now) ?? PrayerCalc.next(now);
     _nextKey = k;
     _nextTime = t;
   }
 
+  String _key(DateTime now) =>
+      '${_ymd(PrayerCalc.wall(now))}|${_ymd(HomePlace.site.value?.wall(now) ?? now)}';
+
   void _tick() {
     final now = DateTime.now();
-    final w = PrayerCalc.wall(now);
-    final sameDay =
-        w.year == _day.year && w.month == _day.month && w.day == _day.day;
+    final sameDay = _key(now) == _dayKey;
     if (!sameDay || !_nextTime.isAfter(now)) {
       final old = _nextKey;
       _compute(now);
@@ -101,12 +123,47 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
         '${two(left.inHours)}:${two(left.inMinutes % 60)}:${two(left.inSeconds % 60)}';
   }
 
+  Future<void> _locate() async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(const SnackBar(
+        content: Text('جارٍ تحديد موقعك…'), duration: Duration(seconds: 3)));
+    final err = await HomePlace.locate();
+    messenger.hideCurrentSnackBar();
+    if (err != null) {
+      messenger.showSnackBar(SnackBar(content: Text(err)));
+      return;
+    }
+    try {
+      await AdhanService.instance.scheduleAll(force: true);
+    } catch (_) {}
+    messenger.showSnackBar(SnackBar(
+        content: Text('صار الأذان على توقيت ${HomePlace.site.value!.name}')));
+  }
+
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat.jm('ar');
-    final now = PrayerCalc.mosqueNow(); // التاريخ بتوقيت المسجد
+    final home = HomePlace.site.value;
+    // التاريخ بتوقيت مكان السكن إن حُدّد، وإلا بتوقيت المسجد.
+    final now = home?.now() ?? PrayerCalc.mosqueNow();
     final h = HijriCalendar.fromDate(now);
     final scheme = Theme.of(context).colorScheme;
+    final homeTimes = _homeToday;
+    final timeStyle = Theme.of(context)
+        .textTheme
+        .titleMedium
+        ?.copyWith(fontWeight: FontWeight.w700);
+    final mosqueStyle = Theme.of(context)
+        .textTheme
+        .bodyMedium
+        ?.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600);
+    Widget col(String text, TextStyle? style) => SizedBox(
+        width: 76,
+        child: Text(text,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: style));
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -119,9 +176,31 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 12),
-        _NextPrayerCard(label: _labels[_nextKey]!, countdown: _countdown),
+        _NextPrayerCard(
+            label: _labels[_nextKey]!,
+            place: home == null ? null : 'بتوقيت ${home.name}',
+            countdown: _countdown),
+        if (_showHint)
+          _AbroadHint(
+              onLocate: _locate,
+              onDismiss: () {
+                HomePlace.dismissHint();
+                setState(() => _showHint = false);
+              }),
         const _ResumeReadingCard(),
         const SizedBox(height: 6),
+        if (homeTimes != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 2),
+            child: Row(children: [
+              const Expanded(child: SizedBox()),
+              col(
+                  home!.name,
+                  Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: scheme.primary, fontWeight: FontWeight.w700)),
+              col('كنصفرة', Theme.of(context).textTheme.labelMedium),
+            ]),
+          ),
         for (final k in _order)
           Card(
             color: k == _nextKey ? scheme.primaryContainer : null,
@@ -147,11 +226,13 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
                   style: const TextStyle(
                       fontWeight: FontWeight.w700, fontSize: 16)),
               subtitle: k == _nextKey ? const Text('الصلاة القادمة') : null,
-              trailing: Text(fmt.format(PrayerCalc.wall(_today[k]!)),
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700)),
+              trailing: homeTimes == null
+                  ? Text(fmt.format(PrayerCalc.wall(_today[k]!)),
+                      style: timeStyle)
+                  : Row(mainAxisSize: MainAxisSize.min, children: [
+                      col(fmt.format(home!.wall(homeTimes[k]!)), timeStyle),
+                      col(fmt.format(PrayerCalc.wall(_today[k]!)), mosqueStyle),
+                    ]),
             ),
           ),
       ],
@@ -162,8 +243,10 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
 /// بطاقة الصلاة القادمة: تدرّج أخضر مع زخرفة نجمية خفيفة وعدّاد ذهبي.
 class _NextPrayerCard extends StatelessWidget {
   final String label;
+  final String? place; // «بتوقيت ستوكهولم» حين يكون الأذان على مكان السكن
   final ValueNotifier<String> countdown;
-  const _NextPrayerCard({required this.label, required this.countdown});
+  const _NextPrayerCard(
+      {required this.label, this.place, required this.countdown});
 
   @override
   Widget build(BuildContext context) {
@@ -192,6 +275,11 @@ class _NextPrayerCard extends StatelessWidget {
                       color: Colors.white,
                       fontSize: 26,
                       fontWeight: FontWeight.w700)),
+              if (place != null)
+                Text(place!,
+                    style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 13)),
               const SizedBox(height: 6),
               ValueListenableBuilder<String>(
                 valueListenable: countdown,
@@ -241,6 +329,52 @@ class _StarPatternPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// اقتراح لمن هاتفه على غير توقيت سوريا: أذان على توقيت مكان سكنه، ومواقيت كنصفرة بجانبه.
+class _AbroadHint extends StatelessWidget {
+  final VoidCallback onLocate;
+  final VoidCallback onDismiss;
+  const _AbroadHint({required this.onLocate, required this.onDismiss});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(top: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: cs.tertiary),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.public_rounded, color: cs.tertiary),
+            const SizedBox(width: 8),
+            Text('تسكن خارج سوريا؟',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+          ]),
+          const SizedBox(height: 6),
+          const Text(
+              'اجعل الأذان على توقيت مكان سكنك (أم القرى)، وتبقى مواقيت كنصفرة ظاهرة بجانبه.'),
+          Row(children: [
+            FilledButton.icon(
+              style: FilledButton.styleFrom(minimumSize: const Size(0, 42)),
+              onPressed: onLocate,
+              icon: const Icon(Icons.my_location_rounded, size: 18),
+              label: const Text('تحديد موقعي'),
+            ),
+            const SizedBox(width: 8),
+            TextButton(onPressed: onDismiss, child: const Text('لا، شكرًا')),
+          ]),
+        ]),
+      ),
+    );
+  }
 }
 
 /// متابعة القراءة: تظهر في الرئيسية إن وضع المستخدم علامة في المصحف، وتفتح من آخر آية وصل إليها.
