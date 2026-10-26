@@ -52,12 +52,12 @@ android {
         create("kansafra") {
             dimension = "app"
             applicationId = "org.kansafra.kansafra_mosque"
-            resValue("string", "app_name", "مسجد كنصفرة الكبير")
+            manifestPlaceholders["appName"] = "مسجد كنصفرة الكبير"
         }
         create("rafiq") {
             dimension = "app"
             applicationId = "se.alamin.rafiq"
-            resValue("string", "app_name", "رفيق المسلم")
+            manifestPlaceholders["appName"] = "رفيق المسلم"
         }
     }
 
