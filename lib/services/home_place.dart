@@ -27,8 +27,9 @@ class HomePlace {
     final p = v?.split('|');
     if (p == null || p.length != 3) return;
     final lat = double.tryParse(p[0]), lng = double.tryParse(p[1]);
-    if (lat != null && lng != null)
+    if (lat != null && lng != null) {
       site.value = PrayerSite.home(p[2], lat, lng);
+    }
   }
 
   static Future<void> _save(PrayerSite? s) async {
