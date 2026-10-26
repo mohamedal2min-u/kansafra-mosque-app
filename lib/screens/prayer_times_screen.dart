@@ -1,4 +1,7 @@
 import '../quran/khatma.dart';
+import '../quran/player.dart';
+import '../quran/radio_screen.dart';
+import '../quran/radios.dart';
 import '../quran/quran_data.dart';
 import '../quran/reader_screen.dart';
 import '../quran/reading_stats.dart';
@@ -184,6 +187,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
             label: _labels[_nextKey]!,
             place: home == null ? null : 'بتوقيت ${home.name}',
             countdown: _countdown),
+        const _LiveRadioCard(),
         ValueListenableBuilder<bool>(
           valueListenable: TravelWatch.askHere,
           builder: (_, ask, __) => !ask
@@ -436,6 +440,110 @@ class _InfoCard extends StatelessWidget {
                 TextButton(onPressed: onDismiss, child: Text(dismiss)),
               ]),
         ]),
+      ),
+    );
+  }
+}
+
+/// البث المباشر في الرئيسية: إذاعتا القرآن الكريم (القاهرة والسعودية) بضغطة، وباقي الإذاعات من «المزيد».
+class _LiveRadioCard extends StatelessWidget {
+  const _LiveRadioCard();
+
+  static const _short = {-1: 'القاهرة', -2: 'السعودية'};
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final p = QuranPlayer.instance;
+    return Card(
+      margin: const EdgeInsets.only(top: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+        child: ListenableBuilder(
+          listenable: p,
+          builder: (context, _) => Row(children: [
+            Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                    color: const Color(0xFFD32F2F),
+                    borderRadius: BorderRadius.circular(8)),
+                child: const Text('مباشر',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700)),
+              ),
+              const SizedBox(height: 2),
+              Text('إذاعة القرآن',
+                  style: Theme.of(context).textTheme.labelSmall),
+            ]),
+            const SizedBox(width: 8),
+            for (final st in RadioApi.featured)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: _StationButton(
+                    label: _short[st.id] ?? st.name,
+                    on: p.radio?.url == st.url && p.playing,
+                    onTap: () => p.radio?.url == st.url
+                        ? (p.playing ? p.stop() : p.toggle())
+                        : p.playRadio(st),
+                  ),
+                ),
+              ),
+            IconButton(
+              tooltip: 'كل الإذاعات',
+              icon: const Icon(Icons.chevron_left_rounded),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => Scaffold(
+                    appBar: AppBar(title: const Text('البث المباشر')),
+                    body: const RadioScreen()),
+              )),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _StationButton extends StatelessWidget {
+  final String label;
+  final bool on;
+  final VoidCallback onTap;
+  const _StationButton(
+      {required this.label, required this.on, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: on ? cs.primary : cs.primaryContainer,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(on ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                size: 22, color: on ? Colors.white : cs.primary),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: on ? Colors.white : cs.onPrimaryContainer)),
+            ),
+          ]),
+        ),
       ),
     );
   }

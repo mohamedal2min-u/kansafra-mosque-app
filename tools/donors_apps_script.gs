@@ -8,6 +8,9 @@ const WEB_CLIENT_ID = '843002779261-9mp73ui95d4f2h3hha9399m05bg3d611.apps.google
 
 const DONOR_HEADERS = ['التاريخ', 'الاسم', 'المبلغ', 'المالك', 'المرجع'];
 const SUPPORT_HEADERS = ['التاريخ', 'الاسم', 'الهاتف', 'النوع', 'الرسالة', 'المالك', 'الرد', 'تاريخ الرد'];
+// ورقة «القرّاء»: لترتيب القرّاء بوقت القراءة. لتغيير اسم غير لائق: عدّل عمود «الاسم» أو احذف الصف.
+const READER_HEADERS = ['المالك', 'الاسم', 'الشهر (سنة وشهر)', 'ثواني الشهر', 'ثواني الكل', 'آخر تحديث'];
+const BOARD_SIZE = 50;
 
 function doGet(e) {
   const p = e.parameter || {};
@@ -35,7 +38,73 @@ function doGet(e) {
       props.setProperty(key, owner);
       const from = 'd:' + p.device;
       const moved = relabel(sheet, 4, from, owner) + relabel(supportSheet(ss), 6, from, owner);
+      relabel(readersSheet(ss), 1, from, owner); // رصيد القراءة ينتقل مع الحساب
       return json({ linked: true, moved: moved });
+    });
+  }
+
+  // وقت القراءة من التطبيق: صف واحد لكل قارئ، والقيم لا تنقص (إعادة تثبيت التطبيق لا تمسح رصيده).
+  if (p.action === 'read') {
+    if (!owner) return json({ error: 'auth' });
+    const month = monthNum(p.month);
+    if (!month) return json({ error: 'bad' });
+    // حدّ معقول: 16 ساعة في اليوم من أيام الشهر.
+    const now = new Date();
+    const day = month === now.getFullYear() * 100 + now.getMonth() + 1 ? now.getDate() + 1 : 31;
+    const ts = Math.max(0, Math.min(Number(p.ts) || 0, 20 * 365 * 16 * 3600));
+    const ms = Math.max(0, Math.min(Number(p.ms) || 0, day * 16 * 3600, ts));
+    return withLock(function () {
+      const sh = readersSheet(ss);
+      const last = sh.getLastRow();
+      const owners = last < 2 ? [] : sh.getRange(2, 1, last - 1, 1).getValues();
+      let row = -1;
+      for (let i = 0; i < owners.length; i++) if (owners[i][0] === owner) { row = i + 2; break; }
+      if (row < 0) {
+        sh.appendRow([owner, p.name !== undefined ? clean(p.name, 24) : '', month, ms, ts, new Date()]);
+      } else {
+        const r = sh.getRange(row, 1, 1, 6).getValues()[0];
+        const old = Number(r[2]) || 0;
+        sh.getRange(row, 1, 1, 6).setValues([[owner,
+          p.name !== undefined ? clean(p.name, 24) : r[1],
+          Math.max(old, month),
+          month === old ? Math.max(Number(r[3]) || 0, ms) : (month > old ? ms : r[3]),
+          Math.max(Number(r[4]) || 0, ts),
+          new Date()]]);
+      }
+      return json({ ok: true });
+    });
+  }
+
+  // الخروج من الترتيب: يحذف صف القارئ.
+  if (p.action === 'leave') {
+    if (!owner) return json({ error: 'auth' });
+    return withLock(function () {
+      const sh = readersSheet(ss);
+      const last = sh.getLastRow();
+      const owners = last < 2 ? [] : sh.getRange(2, 1, last - 1, 1).getValues();
+      for (let i = owners.length - 1; i >= 0; i--) if (owners[i][0] === owner) sh.deleteRow(i + 2);
+      return json({ ok: true });
+    });
+  }
+
+  // ترتيب القرّاء: هذا الشهر وكل الأوقات. لا نرسل معرّفات أحد، فقط علامة me لصف السائل.
+  if (p.action === 'board') {
+    const month = monthNum(p.month);
+    const rows = rowsOf(readersSheet(ss), 5).filter(function (r) { return r[0]; });
+    function board(score) {
+      const list = rows.map(function (r) {
+        return { o: r[0], n: String(r[1] || '') || defaultReaderName(r[0]), s: score(r) };
+      }).filter(function (x) { return x.s >= 60; }).sort(function (a, b) { return b.s - a.s; });
+      let mine = 0;
+      for (let i = 0; i < list.length; i++) if (owner && list[i].o === owner) { mine = i + 1; break; }
+      return {
+        top: list.slice(0, BOARD_SIZE).map(function (x) { return { n: x.n, s: x.s, me: !!owner && x.o === owner }; }),
+        rank: mine, count: list.length,
+      };
+    }
+    return json({
+      month: board(function (r) { return Number(r[2]) === month ? Number(r[3]) || 0 : 0; }),
+      all: board(function (r) { return Number(r[4]) || 0; }),
     });
   }
 
@@ -107,6 +176,25 @@ function relabel(sheet, col, from, to) {
   }
   if (n) range.setValues(vals);
   return n;
+}
+
+function readersSheet(ss) {
+  let sh = ss.getSheetByName('القرّاء');
+  if (!sh) sh = ss.insertSheet('القرّاء');
+  ensureHeaders(sh, READER_HEADERS);
+  return sh;
+}
+
+// «2026-10» ← 202610 (رقم لا يحوّله الجدول إلى تاريخ). 0 إن كان غير صالح.
+function monthNum(m) {
+  return /^\d{4}-\d{2}$/.test(m || '') ? Number(m.slice(0, 4)) * 100 + Number(m.slice(5)) : 0;
+}
+
+// اسم افتراضي ثابت لمن لم يختر اسمًا: «قارئ 4821» (رقم من معرّفه، لا يكشف المعرّف).
+function defaultReaderName(owner) {
+  let h = 0;
+  for (let i = 0; i < owner.length; i++) h = (h * 31 + owner.charCodeAt(i)) % 9000;
+  return 'قارئ ' + (1000 + h);
 }
 
 function supportSheet(ss) {

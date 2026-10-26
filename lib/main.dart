@@ -10,6 +10,7 @@ import 'services/adhan_service.dart';
 import 'services/diag_log.dart';
 import 'services/home_place.dart';
 import 'services/travel_watch.dart';
+import 'quran/leaderboard.dart';
 import 'quran/mini_player.dart';
 import 'quran/player.dart';
 import 'quran/quran_home.dart';
@@ -36,8 +37,12 @@ Future<void> main() async {
           defaultTargetPlatform == TargetPlatform.iOS)) {
     // بعد أول إطار حتى لا يؤخّر طلب الأذونات فتح التطبيق.
     // ثم فحص السفر (يحتاج الإشعارات جاهزة).
-    WidgetsBinding.instance.addPostFrameCallback(
-        (_) => AdhanService.instance.init().then((_) => TravelWatch.check()));
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => AdhanService.instance.init().then((_) {
+              TravelWatch.check();
+              Leaderboard
+                  .report(); // وقت القراءة لترتيب القرّاء (مرة كل 10 دقائق على الأكثر)
+            }));
   }
   // خدمة تشغيل القرآن في الخلفية: تبدأ تهيئتها الآن دون أن تؤخر فتح التطبيق، والمشغّل نفسه لا يُنشأ إلا عند أول استماع.
   QuranPlayer.initBackground();

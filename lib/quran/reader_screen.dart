@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'khatma.dart';
+import 'leaderboard.dart';
 import 'reading_stats.dart';
 import 'saved_verses.dart';
 import 'tafsir.dart';
@@ -489,7 +490,7 @@ class _SurahReaderScreenState extends State<SurahReaderScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _readTimer?.cancel();
-    ReadingStats.instance.flush();
+    ReadingStats.instance.flush().then((_) => Leaderboard.report());
     _posSub?.cancel();
     if (widget.follow) QuranPlayer.instance.removeListener(_onPlayer);
     _scroll.dispose();

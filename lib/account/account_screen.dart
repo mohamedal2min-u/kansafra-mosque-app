@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../donors/donors_repository.dart';
+import '../quran/leaderboard.dart';
+import '../quran/leaderboard_screen.dart';
 import '../quran/reading_stats.dart';
 import 'history_api.dart';
 import 'identity.dart';
@@ -428,15 +430,22 @@ class _ReadingCard extends StatelessWidget {
             Text(
                 'يُحسب الوقت ما دامت شاشة القراءة تتحرك، ويتوقف إن بقيت ساكنة أكثر من دقيقتين.',
                 style: tt.bodySmall),
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: TextButton.icon(
+            Wrap(spacing: 4, children: [
+              TextButton.icon(
                 icon: const Icon(Icons.bar_chart_rounded),
-                label: const Text('التفاصيل: يومي وشهري وسنوي'),
+                label: const Text('التفاصيل'),
                 onPressed: () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => const ReadingHistoryScreen())),
               ),
-            ),
+              if (Leaderboard.supported)
+                TextButton.icon(
+                  icon: const Icon(Icons.emoji_events_rounded,
+                      color: Color(0xFFFFC107)),
+                  label: const Text('ترتيب القرّاء'),
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const LeaderboardScreen())),
+                ),
+            ]),
           ]),
         );
       },
