@@ -51,7 +51,8 @@ jobs:
       - name: Build APK (both apps)
         run: |
           # تطبيقان من الكود نفسه: مسجد كنصفرة (kansafra) ورفيق المسلم (rafiq).
-          opts="--release --split-debug-info=build/symbols --build-name=1.0.0 --build-number=$GITHUB_RUN_NUMBER"
+          ver=$(grep -E '^version:' pubspec.yaml | sed -E 's/version: *//; s/\+.*//')
+          opts="--release --split-debug-info=build/symbols --build-name=$ver --build-number=$GITHUB_RUN_NUMBER"
           : > build.log
           for f in kansafra rafiq; do
             flutter build apk $opts --flavor $f --split-per-abi --target-platform android-arm,android-arm64 >> build.log 2>&1 &&

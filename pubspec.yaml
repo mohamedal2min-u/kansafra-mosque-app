@@ -1,7 +1,7 @@
 name: kansafra_mosque
 description: تطبيق مسجد كنصفرة الكبير - مواقيت الصلاة والأذان والتبرعات
 publish_to: none
-version: 1.0.1+37
+version: 1.0.2+89
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
