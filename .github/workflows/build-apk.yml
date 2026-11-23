@@ -45,6 +45,24 @@ jobs:
           fi
           printf 'storeFile=release.jks\nstorePassword=%s\nkeyPassword=%s\nkeyAlias=kansafra\n' "$KS_PASS" "$KS_PASS" > android/key.properties
           echo "::notice::SIGNING=release-key (base64 length $len)"
+      - name: Prepare Kansafra upload key (Play Console upload key, alias "upload")
+        env:
+          K_B64: ${{ secrets.KANSAFRA_KEYSTORE_BASE64 }}
+          K_PASS: ${{ secrets.KANSAFRA_KEYSTORE_PASSWORD }}
+        run: |
+          # تطبيق مسجد كنصفرة على Google Play مسجّل بمفتاح رفع خاص (SHA1 A3:F0:55:5B…).
+          # رفيق المسلم يبقى على مفتاح ANDROID_KEYSTORE_* السابق.
+          if [ -z "$K_B64" ] || [ -z "$K_PASS" ]; then
+            echo "::warning::KANSAFRA_KEYSTORE_BASE64/PASSWORD missing: kansafra will use the shared key and Play will reject it"
+            exit 0
+          fi
+          printf '%s' "$K_B64" | tr -d ' \n\r\t"' | base64 -d > android/app/kansafra-upload.jks
+          if ! keytool -list -keystore android/app/kansafra-upload.jks -storepass "$K_PASS" -alias upload >/dev/null 2>&1; then
+            echo "::error::Kansafra keystore cannot be opened with KANSAFRA_KEYSTORE_PASSWORD (or alias 'upload' missing)."
+            exit 1
+          fi
+          printf 'storeFile=kansafra-upload.jks\nstorePassword=%s\nkeyPassword=%s\nkeyAlias=upload\n' "$K_PASS" "$K_PASS" > android/key.kansafra.properties
+          echo "::notice::KANSAFRA SIGNING=upload-key"
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos
       - run: flutter test
@@ -54,7 +72,10 @@ jobs:
           ver=$(grep -E '^version:' pubspec.yaml | sed -E 's/version: *//; s/\+.*//')
           opts="--release --split-debug-info=build/symbols --build-name=$ver --build-number=$GITHUB_RUN_NUMBER"
           : > build.log
+          [ -f android/key.properties ] && cp android/key.properties android/key.shared.properties
           for f in kansafra rafiq; do
+            if [ "$f" = kansafra ] && [ -f android/key.kansafra.properties ]; then cp android/key.kansafra.properties android/key.properties
+            elif [ -f android/key.shared.properties ]; then cp android/key.shared.properties android/key.properties; fi
             flutter build apk $opts --flavor $f --split-per-abi --target-platform android-arm,android-arm64 >> build.log 2>&1 &&
             flutter build appbundle $opts --flavor $f >> build.log 2>&1 || {
               msg=$(grep -E "(rror|What went wrong|FAILURE|Could not|requires|not found)" -A3 build.log | head -25 | tr '\n' '|' | cut -c1-1800)
