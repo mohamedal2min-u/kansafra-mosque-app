@@ -57,11 +57,16 @@ jobs:
             exit 0
           fi
           printf '%s' "$K_B64" | tr -d ' \n\r\t"' | base64 -d > android/app/kansafra-upload.jks
-          if ! keytool -list -keystore android/app/kansafra-upload.jks -storepass "$K_PASS" -alias upload >/dev/null 2>&1; then
-            echo "::error::Kansafra keystore cannot be opened with KANSAFRA_KEYSTORE_PASSWORD (or alias 'upload' missing)."
+          if ! keytool -list -keystore android/app/kansafra-upload.jks -storepass "$K_PASS" >/dev/null 2>&1; then
+            echo "::error::Kansafra keystore cannot be opened with KANSAFRA_KEYSTORE_PASSWORD."
             exit 1
           fi
-          printf 'storeFile=kansafra-upload.jks\nstorePassword=%s\nkeyPassword=%s\nkeyAlias=upload\n' "$K_PASS" "$K_PASS" > android/key.kansafra.properties
+          # alias "upload" إن وُجد، وإلا أول مفتاح خاص (ملفات PFX من ويندوز لها أسماء تلقائية).
+          alias=upload
+          keytool -list -keystore android/app/kansafra-upload.jks -storepass "$K_PASS" -alias upload >/dev/null 2>&1 ||
+            alias=$(keytool -list -keystore android/app/kansafra-upload.jks -storepass "$K_PASS" | grep -i PrivateKeyEntry | head -1 | cut -d, -f1)
+          keytool -list -v -keystore android/app/kansafra-upload.jks -storepass "$K_PASS" -alias "$alias" | grep -E "SHA1:|Owner:" | sed 's/^/::notice::KANSAFRA KEY /'
+          printf 'storeFile=kansafra-upload.jks\nstorePassword=%s\nkeyPassword=%s\nkeyAlias=%s\n' "$K_PASS" "$K_PASS" "$alias" > android/key.kansafra.properties
           echo "::notice::KANSAFRA SIGNING=upload-key"
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos
